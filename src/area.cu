@@ -11,7 +11,7 @@ __host__ __device__ __inline__
 int sqr_distance(int x1, int y1, int x2, int y2) {
   int dx = x1-x2;
   int dy = y1-y2;
-  return dx*dx - dy*dy;
+  return dx*dx + dy*dy;
 }
 
 /* Check line's turn created by 3 points (a -> b -> c)
@@ -41,8 +41,8 @@ vector<Minutia> buildConvexHull(vector<Minutia>& minutiae) {
   }
 
   Minutia pivot = minutiae[min_y];
-  swap(minutiae[0], minutiae[min_y]);
-  sort(begin(minutiae)+1, end(minutiae), [&]
+  swap(minutiae.front(), minutiae[min_y]);
+  sort(minutiae.begin()+1, minutiae.end(), [&]
       (const Minutia &lhs, const Minutia &rhs) {
     int turn = minutiae_turn(pivot, lhs, rhs);
     if (turn == 0) {
@@ -99,13 +99,13 @@ void extendConvexHull(char *area, int rows, int cols, int radius, char *extended
     return;
   }
 
-  int i = x - radius + threadIdx.x;
+  int i = x - radius + threadIdx.x + 1;
   if (i < 0 || i >= rows)
     return;
 
   const int radius2 = radius*radius;
   int stride = i * cols;
-  for (int j = y-radius; j < y+radius; ++j) {
+  for (int j = y-radius; j <= y+radius; ++j) {
     if (j < 0 || j >= cols || !area[stride + j]) continue;
     if (sqr_distance(x, y, i, j) <= radius2) {
       extended[idx] = 1;
