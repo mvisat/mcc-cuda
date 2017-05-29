@@ -88,25 +88,30 @@ void fillConvexHull(Minutia *hull, const int nHull, char *area) {
 __global__
 void extendConvexHull(char *area, int rows, int cols, int radius, char *extended) {
   int x = blockIdx.x;
-  int y = threadIdx.x;
-  int idx = x * blockDim.x + y;
+  int y = blockIdx.y;
+  int idx = x * cols + y;
+
+  if (extended[idx])
+    return;
 
   if (area[idx]) {
     extended[idx] = 1;
     return;
   }
 
+  int i = x - radius + threadIdx.x;
+  if (i < 0 || i >= rows)
+    return;
+
   const int radius2 = radius*radius;
-  for (int i = max(0, x-radius); i <= min(rows-1, x+radius); ++i) {
-    for (int j = max(0, y-radius); j <= min(cols-1, y+radius); ++j) {
-      if (!area[i * blockDim.x + j]) continue;
-      if (sqr_distance(x, y, i, j) <= radius2) {
-        extended[idx] = 1;
-        return;
-      }
+  int stride = i * cols;
+  for (int j = y-radius; j < y+radius; ++j) {
+    if (j < 0 || j >= cols || !area[stride + j]) continue;
+    if (sqr_distance(x, y, i, j) <= radius2) {
+      extended[idx] = 1;
+      return;
     }
   }
-  extended[idx] = 0;
 }
 
 __host__
@@ -129,7 +134,11 @@ vector<char> buildValidArea(vector<Minutia>& minutiae, int rows, int cols) {
   char *devExtended = nullptr;
   handleError(
     cudaMalloc(&devExtended, devAreaSize));
-  extendConvexHull<<<rows, cols>>>(devArea, rows, cols, OMEGA, devExtended);
+  handleError(
+    cudaMemset(devExtended, 0, devAreaSize));
+  dim3 gridDim(rows, cols);
+  dim3 blockDim(2*OMEGA);
+  extendConvexHull<<<gridDim, blockDim>>>(devArea, rows, cols, OMEGA, devExtended);
   cudaFree(devArea);
 
   vector<char> ret(rows * cols);
