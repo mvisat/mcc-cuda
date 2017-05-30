@@ -7,6 +7,7 @@
 #include "errors.h"
 #include "constants.cuh"
 #include "area.cuh"
+#include "template.cuh"
 
 using namespace std;
 
@@ -22,9 +23,8 @@ int main() {
     minutiae.emplace_back(x, y, theta);
   }
 
-  vector<char> x = buildValidArea(minutiae, rows, cols);
-  handleError(
-    cudaDeviceSynchronize());
-
+  auto area = buildValidArea(minutiae, rows, cols);
+  auto t = buildTemplate(minutiae, area, rows, cols);
+  handleError(cudaDeviceSynchronize());
   return 0;
 }
