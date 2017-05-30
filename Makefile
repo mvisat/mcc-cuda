@@ -9,7 +9,7 @@ INCLUDES  += -I. -I$(CUDA_PATH)/include
 LIBS      += -L$(CUDA_PATH)/lib64
 CXXFLAGS  += -Wall -pedantic -O3 -std=c++11
 NVCC			:= nvcc
-NVCCFLAGS := -O3 -std=c++11
+NVCCFLAGS := -O3 -std=c++11 --ptxas-options=-v
 CUDA_ARCH := -arch=sm_61
 
 CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
