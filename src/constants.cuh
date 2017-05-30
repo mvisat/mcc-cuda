@@ -7,6 +7,7 @@
 #define ROWS 100
 #define COLS 100
 
+#define EPS 1e-9
 __constant__ const int R = 70;
 __constant__ const int R2 = R * R;
 __constant__ const int NS = 8;

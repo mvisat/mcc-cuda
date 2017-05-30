@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include "errors.h"
-#include "template.cuh"
 #include "constants.cuh"
 #include "area.cuh"
 
@@ -27,13 +26,5 @@ int main() {
   handleError(
     cudaDeviceSynchronize());
 
-  ofstream of("tes.txt");
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      int idx = i * cols + j;
-      of << (x[idx] ? '1' : '0');
-    }
-    of << endl;
-  }
   return 0;
 }
