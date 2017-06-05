@@ -6,12 +6,10 @@
 
 using namespace std;
 
-// TODO: use global constant to precompute
+__constant__ const GS_DIV = sqrtf(M_2PI) * SIGMA_S;
 __host__ __device__ __inline__
 float gaussian(float value) {
-  const float GS_DIV = sqrtf(2*M_PI) * SIGMA_S;
-  const int expDenom = 2 * SIGMA_S * SIGMA_S;
-  return expf(-(value*value)/expDenom) / GS_DIV;
+  return expf(-(value*value)/SIGMA_2S_SQR) / GS_DIV;
 }
 
 __host__ __device__ __inline__
@@ -36,9 +34,9 @@ __host__ __device__ __inline__
 float angle(float theta1, float theta2) {
   float diff = theta1-theta2;
   if (diff < -M_PI)
-    return 2*M_PI + diff;
+    return M_2PI + diff;
   if (diff >= M_PI)
-    return -2*M_PI + diff;
+    return -M_2PI + diff;
   return diff;
 }
 
@@ -77,10 +75,10 @@ void buildCylinder(
   int pi = m->x + DELTA_S * (cost * halfNSi + sint * halfNSj);
   int pj = m->y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
 
-  const int SQR_SIGMA_S = 9 * SIGMA_S * SIGMA_S;
+  const int SIGMA_9S_SQR = 9 * SIGMA_S_SQR;
 
   char validity = pi >= 0 && pi < rows && pj >= 0 && pj < cols &&
-    validArea[pi * cols + pj] && sqrDistance(m->x, m->y, pi, pj) <= R2;
+    validArea[pi * cols + pj] && sqrDistance(m->x, m->y, pi, pj) <= R_SQR;
 
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
   for (int k = 0; k < ND; ++k, ++idx) {
@@ -95,7 +93,7 @@ void buildCylinder(
           continue;
 
         Minutia *mt = &sharedMinutiae[l];
-        if (sqrDistance(m->x, m->y, mt->x, mt->y) > SQR_SIGMA_S)
+        if (sqrDistance(m->x, m->y, mt->x, mt->y) > SIGMA_9S_SQR)
           continue;
 
         contributed[l] = 1;
