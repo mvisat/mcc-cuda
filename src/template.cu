@@ -12,6 +12,19 @@ float gaussian(float value) {
   return expf(-(value*value)/SIGMA_2S_SQR) / GS_DIV;
 }
 
+// http://www.wolframalpha.com/input/?i=integrate+(e%5E(-(t%5E2)%2F(2(x%5E2)))+dt)
+__host__ __device__ __inline__
+float gaussianIntegral(float value) {
+  const float a = sqrtf(M_PI_2) * SIGMA_D;
+  const float b = M_SQRT2 * SIGMA_D;
+  auto integrate = [](float val) {
+    return a * erff(val/b);
+  }
+  return rsqrtf(M_2PI) *
+    (integrate(value+DELTA_D_2)-integrate(value-DELTA_D_2))
+    / SIGMA_D;
+}
+
 __host__ __device__ __inline__
 int sqrDistance(int x1, int y1, int x2, int y2) {
   int dx = x1 - x2;
@@ -40,11 +53,11 @@ float angle(float theta1, float theta2) {
   return diff;
 }
 
-// TODO: use gaussian function
 __host__ __device__ __inline__
 float directionalContribution(
     float m_theta, float mt_theta, float dphik) {
-  return angle(dphik, angle(m_theta, mt_theta));
+  return gaussianIntegral(
+    angle(dphik, angle(m_theta, mt_theta)));
 }
 
 __global__
