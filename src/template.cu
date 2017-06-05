@@ -6,9 +6,9 @@
 
 using namespace std;
 
-__constant__ const GS_DIV = sqrtf(M_2PI) * SIGMA_S;
 __host__ __device__ __inline__
 float gaussian(float value) {
+  const float GS_DIV = sqrtf(M_2PI) * SIGMA_S;
   return expf(-(value*value)/SIGMA_2S_SQR) / GS_DIV;
 }
 
@@ -17,9 +17,9 @@ __host__ __device__ __inline__
 float gaussianIntegral(float value) {
   const float a = sqrtf(M_PI_2) * SIGMA_D;
   const float b = M_SQRT2 * SIGMA_D;
-  auto integrate = [](float val) {
+  auto integrate = [&](float val) {
     return a * erff(val/b);
-  }
+  };
   return rsqrtf(M_2PI) *
     (integrate(value+DELTA_D_2)-integrate(value-DELTA_D_2))
     / SIGMA_D;
