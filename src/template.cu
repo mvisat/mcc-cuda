@@ -118,7 +118,7 @@ void buildCylinder(
       if (sum >= MU_PSI)
         value = 1;
     }
-    cells[idx] = make_char2(validity, value);
+    cells[idx + k] = make_char2(validity, value);
   }
   __syncthreads();
 
