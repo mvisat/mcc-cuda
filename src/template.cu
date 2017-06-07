@@ -77,21 +77,21 @@ void buildCylinder(
   __syncthreads();
 
   int idxMinutia = blockIdx.x;
-  Minutia *m = &sharedMinutiae[idxMinutia];
+  Minutia m = sharedMinutiae[idxMinutia];
 
   int halfNS = -1 + (NS + 1) >> 1;
-  int halfNSi = m->x - halfNS;
-  int halfNSj = m->y - halfNS;
+  int halfNSi = m.x - halfNS;
+  int halfNSj = m.y - halfNS;
 
   float sint, cost;
-  sincosf(m->theta, &sint, &cost);
-  int pi = m->x + DELTA_S * (cost * halfNSi + sint * halfNSj);
-  int pj = m->y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
+  sincosf(m.theta, &sint, &cost);
+  int pi = m.x + DELTA_S * (cost * halfNSi + sint * halfNSj);
+  int pj = m.y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
 
   const int SIGMA_9S_SQR = 9 * SIGMA_S_SQR;
 
   char validity = pi >= 0 && pi < rows && pj >= 0 && pj < cols &&
-    validArea[pi * cols + pj] && sqrDistance(m->x, m->y, pi, pj) <= R_SQR;
+    validArea[pi * cols + pj] && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
 
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
   for (int k = 0; k < ND; ++k, ++idx) {
@@ -105,13 +105,13 @@ void buildCylinder(
         if (l == idxMinutia)
           continue;
 
-        Minutia *mt = &sharedMinutiae[l];
-        if (sqrDistance(m->x, m->y, mt->x, mt->y) > SIGMA_9S_SQR)
+        Minutia mt = sharedMinutiae[l];
+        if (sqrDistance(m.x, m.y, mt.x, mt.y) > SIGMA_9S_SQR)
           continue;
 
         contributed[l] = 1;
-        float sContrib = spatialContribution(mt->x, mt->y, pi, pj);
-        float dContrib = directionalContribution(m->theta, mt->theta, dphik);
+        float sContrib = spatialContribution(mt.x, mt.y, pi, pj);
+        float dContrib = directionalContribution(m.theta, mt.theta, dphik);
         sum += sContrib * dContrib;
       }
 
