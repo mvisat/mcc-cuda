@@ -12,9 +12,9 @@
 using namespace std;
 
 int main() {
-  int rows, cols, dpi, n;
+  int width, height, dpi, n;
   ifstream stream("data/1_1.txt");
-  stream >> rows >> cols >> dpi >> n;
+  stream >> width >> height >> dpi >> n;
   vector<Minutia> minutiae;
   for (int i = 0; i < n; ++i) {
     int x, y;
@@ -23,9 +23,9 @@ int main() {
     minutiae.emplace_back(x, y, theta);
   }
 
-  auto area = buildValidArea(minutiae, rows, cols);
+  auto area = buildValidArea(minutiae, width, height);
   vector<char> values, validities;
-  buildTemplate(minutiae, area, rows, cols, values, validities);
-  handleError(cudaDeviceSynchronize());  
+  buildTemplate(minutiae, area, width, height, values, validities);
+  handleError(cudaDeviceSynchronize());
   return 0;
 }

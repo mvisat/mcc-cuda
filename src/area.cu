@@ -109,7 +109,7 @@ vector<Minutia> buildConvexHull(vector<Minutia>& minutiae) {
 
 __host__
 vector<Minutia> extendConvexHull(vector<Minutia>& hull,
-    int rows, int cols, int radius) {
+    int width, int height, int radius) {
   vector<tuple<int,int,int,int>> edges;
   for (int i = 1; i <= hull.size(); ++i) {
     Minutia *p1 = &hull[i-1];
@@ -134,8 +134,6 @@ vector<Minutia> extendConvexHull(vector<Minutia>& hull,
         xa1, ya1, xa2, ya2,
         xb1, yb1, xb2, yb2,
         &xi, &yi)) {
-      xi = max(min(xi, rows-1), 0);
-      yi = max(min(yi, cols-1), 0);
       extended.emplace_back(xi, yi, hull[i-1].theta);
     }
   }
@@ -144,9 +142,9 @@ vector<Minutia> extendConvexHull(vector<Minutia>& hull,
 
 __global__
 void fillConvexHull(Minutia *hull, const int nHull, char *area) {
-  int x = blockIdx.x;
-  int y = threadIdx.x;
-  int idx = x * blockDim.x + y;
+  int y = blockIdx.x;
+  int x = threadIdx.x;
+  int idx = y*blockDim.x + x;
 
   for (int i = 0; i < nHull; ++i) {
     int b = (i+1) % nHull;
@@ -159,12 +157,12 @@ void fillConvexHull(Minutia *hull, const int nHull, char *area) {
 }
 
 __host__
-vector<char> buildValidArea(vector<Minutia>& minutiae, int rows, int cols) {
+vector<char> buildValidArea(vector<Minutia>& minutiae, int width, int height) {
   vector<Minutia> hull = buildConvexHull(minutiae);
-  hull = extendConvexHull(hull, rows, cols, OMEGA);
+  hull = extendConvexHull(hull, width, height, OMEGA);
 
   size_t devHullSize = hull.size() * sizeof(Minutia);
-  size_t devAreaSize = rows * cols * sizeof(char);
+  size_t devAreaSize = width * height * sizeof(char);
   Minutia *devHull = nullptr;
   char *devArea = nullptr;
   handleError(
@@ -172,11 +170,11 @@ vector<char> buildValidArea(vector<Minutia>& minutiae, int rows, int cols) {
   handleError(
     cudaMemcpy(devHull, hull.data(), devHullSize, cudaMemcpyHostToDevice));
   handleError(
-    cudaMalloc(&devArea, rows * cols * sizeof(char)));
-  fillConvexHull<<<rows, cols>>>(devHull, hull.size(), devArea);
+    cudaMalloc(&devArea, devAreaSize));
+  fillConvexHull<<<height, width>>>(devHull, hull.size(), devArea);
   cudaFree(devHull);
 
-  vector<char> ret(rows * cols);
+  vector<char> ret(width * height);
   handleError(
     cudaMemcpy(ret.data(), devArea, devAreaSize, cudaMemcpyDeviceToHost));
   cudaFree(devArea);

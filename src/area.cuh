@@ -6,7 +6,7 @@
 #include "minutia.cuh"
 
 __host__
-std::vector<char> buildValidArea(std::vector<Minutia>& minutiae, int rows, int cols);
+std::vector<char> buildValidArea(std::vector<Minutia>& minutiae, int width, int height);
 
 __host__
 std::vector<Minutia> buildConvexHull(std::vector<Minutia>& minutiae);

@@ -63,7 +63,7 @@ float directionalContribution(
 __global__
 void buildCylinder(
     Minutia *minutiae, char *validArea,
-    int rows, int cols,
+    int width, int height,
     char *cellValues, char *cellValidities) {
   extern __shared__ int shared[];
 
@@ -90,8 +90,8 @@ void buildCylinder(
   int pj = m.y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
   const int SIGMA_9S_SQR = 9 * SIGMA_S_SQR;
 
-  char validity = pi >= 0 && pi < rows && pj >= 0 && pj < cols &&
-    validArea[pi * cols + pj] && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
+  char validity = pi >= 0 && pi < width && pj >= 0 && pj < height &&
+    validArea[pi * height + pj] && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
   cellValidities[idxMinutia * NS * NS + threadIdx.x * NS + threadIdx.y] = validity;
 
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
@@ -135,14 +135,14 @@ __host__
 void buildTemplate(
     const vector<Minutia>& minutiae,
     const vector<char>& validArea,
-    int rows, int cols,
+    int width, int height,
     vector<char>& cellValues,
     vector<char>& cellValidities) {
   Minutia *devMinutiae;
   char *devArea;
   char *devCellValues, *devCellValidities;
   size_t devMinutiaeSize = minutiae.size() * sizeof(Minutia);
-  size_t devAreaSize = rows * cols * sizeof(char);
+  size_t devAreaSize = width * height * sizeof(char);
   size_t devCellValuesSize = minutiae.size() * NC * sizeof(char);
   size_t devCellValiditiesSize = minutiae.size() * NS * NS * sizeof(char);
   handleError(
@@ -161,7 +161,7 @@ void buildTemplate(
   dim3 blockDim(NS, NS);
   int sharedSize = devMinutiaeSize + minutiae.size() * sizeof(char);
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
-    devMinutiae, devArea, rows, cols, devCellValues, devCellValidities);
+    devMinutiae, devArea, width, height, devCellValues, devCellValidities);
 
   cellValues.resize(minutiae.size() * NC);
   cellValidities.resize(minutiae.size() * NS * NS);
