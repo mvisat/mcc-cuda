@@ -63,7 +63,8 @@ float directionalContribution(
 __global__
 void buildCylinder(
     Minutia *minutiae, char *validArea,
-    int rows, int cols, char2 *cells) {
+    int rows, int cols,
+    char *cellValues, char *cellValidities) {
   extern __shared__ int shared[];
 
   const int N = gridDim.x;
@@ -87,11 +88,11 @@ void buildCylinder(
   sincosf(m.theta, &sint, &cost);
   int pi = m.x + DELTA_S * (cost * halfNSi + sint * halfNSj);
   int pj = m.y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
-
   const int SIGMA_9S_SQR = 9 * SIGMA_S_SQR;
 
   char validity = pi >= 0 && pi < rows && pj >= 0 && pj < cols &&
     validArea[pi * cols + pj] && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
+  cellValidities[idxMinutia * NS * NS + threadIdx.x * NS + threadIdx.y] = validity;
 
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
   for (int k = 0; k < ND; ++k, ++idx) {
@@ -118,7 +119,7 @@ void buildCylinder(
       if (sum >= MU_PSI)
         value = 1;
     }
-    cells[idx + k] = make_char2(validity, value);
+    cellValues[idx] = value;
   }
   __syncthreads();
 
@@ -131,16 +132,19 @@ void buildCylinder(
 }
 
 __host__
-vector<char2> buildTemplate(
+void buildTemplate(
     const vector<Minutia>& minutiae,
     const vector<char>& validArea,
-    int rows, int cols) {
+    int rows, int cols,
+    vector<char>& cellValues,
+    vector<char>& cellValidities) {
   Minutia *devMinutiae;
   char *devArea;
-  char2 *devCells;
+  char *devCellValues, *devCellValidities;
   size_t devMinutiaeSize = minutiae.size() * sizeof(Minutia);
   size_t devAreaSize = rows * cols * sizeof(char);
-  size_t devCellsSize = minutiae.size() * NC * sizeof(char2);
+  size_t devCellValuesSize = minutiae.size() * NC * sizeof(char);
+  size_t devCellValiditiesSize = minutiae.size() * NS * NS * sizeof(char);
   handleError(
     cudaMalloc(&devMinutiae, devMinutiaeSize));
   handleError(
@@ -150,20 +154,24 @@ vector<char2> buildTemplate(
   handleError(
     cudaMemcpy(devArea, validArea.data(), devAreaSize, cudaMemcpyHostToDevice));
   handleError(
-    cudaMalloc(&devCells, devCellsSize));
+    cudaMalloc(&devCellValues, devCellValuesSize));
+  handleError(
+    cudaMalloc(&devCellValidities, devCellValiditiesSize));
 
   dim3 blockDim(NS, NS);
   int sharedSize = devMinutiaeSize + minutiae.size() * sizeof(char);
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
-    devMinutiae, devArea, rows, cols, devCells);
+    devMinutiae, devArea, rows, cols, devCellValues, devCellValidities);
 
-  vector<char2> ret(minutiae.size() * NC);
+  cellValues.resize(minutiae.size() * NC);
+  cellValidities.resize(minutiae.size() * NS * NS);
   handleError(
-    cudaMemcpy(ret.data(), devCells, devCellsSize, cudaMemcpyDeviceToHost));
+    cudaMemcpy(cellValues.data(), devCellValues, devCellValuesSize, cudaMemcpyDeviceToHost));
+  handleError(
+    cudaMemcpy(cellValidities.data(), devCellValidities, devCellValiditiesSize, cudaMemcpyDeviceToHost));
 
   cudaFree(devMinutiae);
   cudaFree(devArea);
-  cudaFree(devCells);
-
-  return ret;
+  cudaFree(devCellValues);
+  cudaFree(devCellValidities);
 }

@@ -6,9 +6,11 @@
 #include "minutia.cuh"
 
 __host__
-std::vector<char2> buildTemplate(
+void buildTemplate(
   const std::vector<Minutia>&,
   const std::vector<char>&,
-  int rows, int cols);
+  int rows, int cols,
+  std::vector<char>&,
+  std::vector<char>&);
 
 #endif
