@@ -80,20 +80,20 @@ void buildCylinder(
   int idxMinutia = blockIdx.x;
   Minutia m = sharedMinutiae[idxMinutia];
 
-  int halfNS = -1 + (NS + 1) >> 1;
-  int halfNSi = m.x - halfNS;
-  int halfNSj = m.y - halfNS;
-
+  float halfNS = (NS + 1) / 2.0f;
+  float halfNSi = (threadIdx.x+1) - halfNS;
+  float halfNSj = (threadIdx.y+1) - halfNS;
   float sint, cost;
   sincosf(m.theta, &sint, &cost);
   int pi = m.x + DELTA_S * (cost * halfNSi + sint * halfNSj);
   int pj = m.y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
+
+  char validity = pi >= 0 && pi < width && pj >= 0 && pj < height
+    && validArea[pj * width + pi]
+    && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
+  cellValidities[idxMinutia * NS * NS + threadIdx.y * NS + threadIdx.x] = validity;
+
   const int SIGMA_9S_SQR = 9 * SIGMA_S_SQR;
-
-  char validity = pi >= 0 && pi < width && pj >= 0 && pj < height &&
-    validArea[pi * height + pj] && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
-  cellValidities[idxMinutia * NS * NS + threadIdx.x * NS + threadIdx.y] = validity;
-
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
   for (int k = 0; k < ND; ++k, ++idx) {
     char value = 0;
