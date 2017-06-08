@@ -11,6 +11,7 @@ void buildTemplate(
   const std::vector<char>&,
   int, int,
   std::vector<char>&,
+  std::vector<char>&,
   std::vector<char>&);
 
 #endif

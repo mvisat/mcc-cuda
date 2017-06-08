@@ -24,8 +24,9 @@ int main() {
   }
 
   auto area = buildValidArea(minutiae, width, height);
-  vector<char> values, validities;
-  buildTemplate(minutiae, area, width, height, values, validities);
+  vector<char> values, validities, cylinderValidities;
+  buildTemplate(minutiae, area, width, height,
+    cylinderValidities, values, validities);
   handleError(cudaDeviceSynchronize());
   return 0;
 }
