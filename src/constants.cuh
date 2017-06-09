@@ -6,6 +6,8 @@
 #define EPS 1e-9f
 __constant__ const float M_2PI = M_PI * 2;
 
+#define MAX_MINUTIAE 256
+
 #define R 70
 __constant__ const int R_SQR = R * R;
 #define NS 16

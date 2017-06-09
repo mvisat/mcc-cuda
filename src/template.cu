@@ -71,7 +71,7 @@ void buildCylinder(
 
   const int N = gridDim.x;
   char *contributed = (char*)shared;
-  Minutia *sharedMinutiae = (Minutia*)&contributed[N];
+  Minutia *sharedMinutiae = (Minutia*)&contributed[MAX_MINUTIAE];
 
   if (blockIdx.x < N) {
     sharedMinutiae[blockIdx.x] = minutiae[blockIdx.x];
@@ -167,7 +167,7 @@ void buildTemplate(
     cudaMalloc(&devCellValidities, devCellValiditiesSize));
 
   dim3 blockDim(NS, NS);
-  int sharedSize = devMinutiaeSize + minutiae.size() * sizeof(char);
+  int sharedSize = devMinutiaeSize + MAX_MINUTIAE * sizeof(char);
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
     devMinutiae, devArea, width, height,
     devCylinderValidities, devCellValues, devCellValidities);
