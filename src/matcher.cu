@@ -1,5 +1,6 @@
-#include "matcher.cu"
+#include "matcher.cuh"
 #include "constants.cuh"
+#include "errors.h"
 
 using namespace std;
 
@@ -14,7 +15,7 @@ void binarizedTemplate(
   int bits = sizeof(int) * 8;
   int intPerCylinder = NC / bits;
   int idx = idxMinutia * intPerCylinder + idxInt;
-  int idxBit = idxMinutia * intPerCylinder + idxInt * bits;
+  int idxBit = idxMinutia * NC + idxInt * bits;
 
   int validity = 0, value = 0;
   for (int i = 0; i < bits; ++i) {
@@ -45,27 +46,48 @@ float matchTemplate(
   handleError(
     cudaMalloc(&devCylinderValidities1, devCylinderValidities1Size));
   handleError(
-    cudaMemcpy(devCylinderValidities1, cylinderValidities1.data(), cudaMemcpyHostToDevice));
+    cudaMemcpy(devCylinderValidities1, cylinderValidities1.data(), devCylinderValidities1Size, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCylinderValidities2, devCylinderValidities2Size));
   handleError(
-    cudaMemcpy(devCylinderValidities2, cylinderValidities2.data(), cudaMemcpyHostToDevice));
+    cudaMemcpy(devCylinderValidities2, cylinderValidities2.data(), devCylinderValidities2Size, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCellValidities1, devCellValidities1Size));
   handleError(
-    cudaMemcpy(devCellValidities1, cellValidities1.data(), cudaMemcpyHostToDevice));
+    cudaMemcpy(devCellValidities1, cellValidities1.data(), devCellValidities1Size, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCellValidities2, devCellValidities2Size));
   handleError(
-    cudaMemcpy(devCellValidities2, cellValidities2.data(), cudaMemcpyHostToDevice));
+    cudaMemcpy(devCellValidities2, cellValidities2.data(), devCellValidities2Size, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCellValues1, devCellValues1Size));
   handleError(
-    cudaMemcpy(devCellValues1, cellValues1.data(), cudaMemcpyHostToDevice));
+    cudaMemcpy(devCellValues1, cellValues1.data(), devCellValues1Size, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCellValues2, devCellValues2Size));
   handleError(
-    cudaMemcpy(devCellValues2, cellValues2.data(), cudaMemcpyHostToDevice));
+    cudaMemcpy(devCellValues2, cellValues2.data(), devCellValues2Size, cudaMemcpyHostToDevice));
+
+  int bits = sizeof(int) * 8;
+  int *devBinarizedValidities1, *devBinarizedValues1;
+  int *devBinarizedValidities2, *devBinarizedValues2;
+  size_t devBinarizedValidities1Size = (cellValidities1.size() / bits) * sizeof(int);
+  size_t devBinarizedValidities2Size = (cellValidities2.size() / bits) * sizeof(int);
+  size_t devBinarizedValues1Size = (cellValues1.size() / bits) * sizeof(int);
+  size_t devBinarizedValues2Size = (cellValues2.size() / bits) * sizeof(int);
+  handleError(
+    cudaMalloc(&devBinarizedValidities1, devBinarizedValidities1Size));
+  handleError(
+    cudaMalloc(&devBinarizedValidities2, devBinarizedValidities2Size));
+  handleError(
+    cudaMalloc(&devBinarizedValues1, devBinarizedValues1Size));
+  handleError(
+    cudaMalloc(&devBinarizedValues2, devBinarizedValues2Size));
+
+  binarizedTemplate<<<cylinderValidities1.size(), NC/bits>>>(
+    devCellValidities1, devCellValues1, devBinarizedValidities1, devBinarizedValues1);
+  binarizedTemplate<<<cylinderValidities2.size(), NC/bits>>>(
+    devCellValidities2, devCellValues2, devBinarizedValidities2, devBinarizedValues2);
 
   // TODO
 
@@ -75,4 +97,8 @@ float matchTemplate(
   cudaFree(devCellValidities2);
   cudaFree(devCellValues1);
   cudaFree(devCellValues2);
+  cudaFree(devBinarizedValidities1);
+  cudaFree(devBinarizedValidities2);
+  cudaFree(devBinarizedValues1);
+  cudaFree(devBinarizedValues2);
 }
