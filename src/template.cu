@@ -131,7 +131,7 @@ void buildCylinder(
       sumContribution += contributed[i];
 
     cylinderValidities[idxMinutia] = sumContribution >= MIN_M &&
-      sumValidities/(float)(NS*NS) >= MIN_VC);
+      sumValidities/(float)(NS*NS) >= MIN_VC;
   }
 }
 
