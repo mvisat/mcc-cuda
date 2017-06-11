@@ -16,6 +16,8 @@ __constant__ const int NC = NS * NS * ND;
 __constant__ const float SIGMA_S = 28.0f / 3;
 __constant__ const float SIGMA_S_SQR = SIGMA_S * SIGMA_S;
 __constant__ const float SIGMA_2S_SQR = 2 * SIGMA_S_SQR;
+#define SIGMA_3S 28
+#define SIGMA_9S_SQR 784 // = (28/3)^2 * 9
 __constant__ const float SIGMA_D = 2 * M_PI / 9;
 __constant__ const float DELTA_S = (float)(R * 2) / NS;
 __constant__ const float DELTA_D = M_PI * 2 / ND;

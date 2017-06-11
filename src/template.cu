@@ -6,6 +6,26 @@
 
 using namespace std;
 
+bool initialized = false;
+int numCellsInCylinder = 0;
+
+__host__ void initialize() {
+  if (initialized) return;
+
+  numCellsInCylinder = 0;
+  float temp = DELTA_S/2;
+  for (int i = 0; i < NS; ++i) {
+    float x = DELTA_S * i + temp;
+    float dx = x-R;
+    for (int j = 0; j < NS; ++j) {
+      float y = DELTA_S * j + temp;
+      float dy = y-R;
+      if (dx*dx + dy*dy <= R_SQR) ++numCellsInCylinder;
+    }
+  }
+  initialized = true;
+}
+
 __host__ __device__ __inline__
 float gaussian(float value) {
   const float GS_DIV = sqrtf(M_2PI) * SIGMA_S;
@@ -66,16 +86,18 @@ void buildCylinder(
     int width, int height,
     char *cylinderValidities,
     char *cellValues,
-    char *cellValidities) {
+    char *cellValidities,
+    int numCellsInCylinder) {
   extern __shared__ int shared[];
 
   const int N = gridDim.x;
   char *contributed = (char*)shared;
   Minutia *sharedMinutiae = (Minutia*)&contributed[MAX_MINUTIAE];
 
-  if (blockIdx.x < N) {
-    sharedMinutiae[blockIdx.x] = minutiae[blockIdx.x];
-    contributed[blockIdx.x] = 0;
+  int idxThread = threadIdx.y * blockDim.x + threadIdx.x;
+  if (idxThread < N) {
+    sharedMinutiae[idxThread] = minutiae[idxThread];
+    contributed[idxThread] = 0;
   }
   __syncthreads();
 
@@ -95,7 +117,6 @@ void buildCylinder(
     && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
   cellValidities[idxMinutia * NS * NS + threadIdx.y * NS + threadIdx.x] = validity;
 
-  const int SIGMA_9S_SQR = 9 * SIGMA_S_SQR;
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
   for (int k = 0; k < ND; ++k, ++idx) {
     char value = 0;
@@ -131,7 +152,7 @@ void buildCylinder(
       sumContribution += contributed[i];
 
     cylinderValidities[idxMinutia] = sumContribution >= MIN_M &&
-      sumValidities/(float)(NS*NS) >= MIN_VC;
+      (float)sumValidities/(numCellsInCylinder) >= MIN_VC;
   }
 }
 
@@ -143,6 +164,9 @@ void buildTemplate(
     vector<char>& cylinderValidities,
     vector<char>& cellValues,
     vector<char>& cellValidities) {
+
+  initialize();
+
   Minutia *devMinutiae;
   char *devArea;
   char *devCylinderValidities, *devCellValues, *devCellValidities;
@@ -170,7 +194,8 @@ void buildTemplate(
   int sharedSize = devMinutiaeSize + MAX_MINUTIAE * sizeof(char);
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
     devMinutiae, devArea, width, height,
-    devCylinderValidities, devCellValues, devCellValidities);
+    devCylinderValidities, devCellValues, devCellValidities,
+    numCellsInCylinder);
 
   cylinderValidities.resize(minutiae.size());
   cellValues.resize(minutiae.size() * NC);
