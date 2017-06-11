@@ -91,17 +91,23 @@ void buildCylinder(
   extern __shared__ int shared[];
 
   const int N = gridDim.x;
-  char *contributed = (char*)shared;
-  Minutia *sharedMinutiae = (Minutia*)&contributed[MAX_MINUTIAE];
-
-  int idxThread = threadIdx.y * blockDim.x + threadIdx.x;
-  if (idxThread < N) {
-    sharedMinutiae[idxThread] = minutiae[idxThread];
-    contributed[idxThread] = 0;
-  }
-  __syncthreads();
+  Minutia *sharedMinutiae = (Minutia*)shared;
 
   int idxMinutia = blockIdx.x;
+  int idxThread = threadIdx.y * blockDim.x + threadIdx.x;
+  int contributed = 0;
+
+  if (idxThread < N) {
+    sharedMinutiae[idxThread] = minutiae[idxThread];
+    if (idxThread != idxMinutia) {
+      auto dist = sqrDistance(
+        sharedMinutiae[idxThread].x, sharedMinutiae[idxThread].y,
+        minutiae[idxMinutia].x, minutiae[idxMinutia].y);
+      contributed = dist <= (R+SIGMA_3S)*(R+SIGMA_3S);
+    }
+  }
+  int sumContributed = __syncthreads_count(contributed);
+
   Minutia m = sharedMinutiae[idxMinutia];
 
   float halfNS = (NS + 1) / 2.0f;
@@ -133,7 +139,6 @@ void buildCylinder(
         if (sqrDistance(m.x, m.y, mt.x, mt.y) > SIGMA_9S_SQR)
           continue;
 
-        contributed[l] = 1;
         float sContrib = spatialContribution(mt.x, mt.y, pi, pj);
         float dContrib = directionalContribution(m.theta, mt.theta, dphik);
         sum += sContrib * dContrib;
@@ -147,11 +152,7 @@ void buildCylinder(
 
   int sumValidities = __syncthreads_count(validity);
   if (threadIdx.x == 0 && threadIdx.y == 0) {
-    int sumContribution = 0;
-    for (int i = 0; i < N; ++i)
-      sumContribution += contributed[i];
-
-    cylinderValidities[idxMinutia] = sumContribution >= MIN_M &&
+    cylinderValidities[idxMinutia] = sumContributed >= MIN_M &&
       (float)sumValidities/(numCellsInCylinder) >= MIN_VC;
   }
 }
