@@ -122,7 +122,6 @@ void buildCylinder(
   char validity = pi >= 0 && pi < width && pj >= 0 && pj < height
     && validArea[pj * width + pi]
     && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
-  cellValidities[idxMinutia * NS * NS + threadIdx.y * NS + threadIdx.x] = validity;
 
   int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
   for (int k = 0; k < ND; ++k, ++idx) {
@@ -148,6 +147,7 @@ void buildCylinder(
       if (sum >= MU_PSI)
         value = 1;
     }
+    cellValidities[idx] = validity;
     cellValues[idx] = value;
   }
 
@@ -181,7 +181,7 @@ void buildTemplate(
   size_t devAreaSize = width * height * sizeof(char);
   size_t devCylinderValiditiesSize = minutiae.size() * sizeof(char);
   size_t devCellValuesSize = minutiae.size() * NC * sizeof(char);
-  size_t devCellValiditiesSize = minutiae.size() * NS * NS * sizeof(char);
+  size_t devCellValiditiesSize = minutiae.size() * NC * sizeof(char);
   handleError(
     cudaMalloc(&devMinutiae, devMinutiaeSize));
   handleError(
@@ -206,7 +206,7 @@ void buildTemplate(
 
   cylinderValidities.resize(minutiae.size());
   cellValues.resize(minutiae.size() * NC);
-  cellValidities.resize(minutiae.size() * NS * NS);
+  cellValidities.resize(minutiae.size() * NC);
   handleError(
     cudaMemcpy(cylinderValidities.data(), devCylinderValidities, devCylinderValiditiesSize, cudaMemcpyDeviceToHost));
   handleError(
