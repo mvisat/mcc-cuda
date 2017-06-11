@@ -135,8 +135,8 @@ void buildCylinder(
         if (l == idxMinutia)
           continue;
 
-        Minutia mt = sharedMinutiae[l];
-        if (sqrDistance(m.x, m.y, mt.x, mt.y) > SIGMA_9S_SQR)
+        Minutia mt(sharedMinutiae[l]);
+        if (sqrDistance(mt.x, mt.y, pi, pj) > SIGMA_9S_SQR)
           continue;
 
         float sContrib = spatialContribution(mt.x, mt.y, pi, pj);
