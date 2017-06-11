@@ -123,7 +123,7 @@ void buildCylinder(
     && validArea[pj * width + pi]
     && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
 
-  int idx = idxMinutia * NC + threadIdx.x * NS * NS + threadIdx.y * NS;
+  int idx = idxMinutia * NC + threadIdx.x * NS * ND + threadIdx.y * ND;
   for (int k = 0; k < ND; ++k, ++idx) {
     char value = 0;
 
