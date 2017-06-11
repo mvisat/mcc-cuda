@@ -30,6 +30,13 @@ $(OBJ_DIR)/%.cu.o: $(SRC_DIR)/%.cu $(CUH_FILES)
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(H_FILES)
 	$(CXX) $(CXXFLAGS) -c -o $@ $< $(INCLUDES)
 
+all: $(TARGET)
+
+debug: CXXFLAGS += -g -DDEBUG
+debug: CCFLAGS += -g -DDEBUG
+debug: NVCCFLAGS += -g -DDEBUG
+debug: $(TARGET)
+
 .PHONY: clean
 clean:
 	rm -f $(OBJ_DIR)/*
