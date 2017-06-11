@@ -1,6 +1,7 @@
 #include <vector>
 
 #include "errors.h"
+#include "debug.h"
 #include "minutia.cuh"
 #include "constants.cuh"
 
@@ -154,6 +155,11 @@ void buildCylinder(
   if (threadIdx.x == 0 && threadIdx.y == 0) {
     cylinderValidities[idxMinutia] = sumContributed >= MIN_M &&
       (float)sumValidities/(numCellsInCylinder) >= MIN_VC;
+    devDebug("Minutia %d:\nMIN_VC ((%d/%d) = %f) >= %f\nMIN_M %d >= %d\n\n",
+      idxMinutia,
+      sumValidities, numCellsInCylinder,
+      (float)sumValidities/(numCellsInCylinder), MIN_VC,
+      sumContributed, MIN_M);
   }
 }
 
