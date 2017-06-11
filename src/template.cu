@@ -198,7 +198,7 @@ void buildTemplate(
     cudaMalloc(&devCellValidities, devCellValiditiesSize));
 
   dim3 blockDim(NS, NS);
-  int sharedSize = devMinutiaeSize + MAX_MINUTIAE * sizeof(char);
+  int sharedSize = devMinutiaeSize;
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
     devMinutiae, devArea, width, height,
     devCylinderValidities, devCellValues, devCellValidities,
