@@ -5,9 +5,11 @@
 #include <iostream>
 
 #include "errors.h"
+#include "debug.h"
 #include "constants.cuh"
 #include "area.cuh"
 #include "template.cuh"
+#include "matcher.cuh"
 
 using namespace std;
 
@@ -28,5 +30,11 @@ int main() {
   buildTemplate(minutiae, area, width, height,
     cylinderValidities, values, validities);
   handleError(cudaDeviceSynchronize());
+
+  vector<char> dummy;
+  debug("Global score: %f\n", matchTemplate(
+    cylinderValidities, validities, values,
+    cylinderValidities, validities, values));
+
   return 0;
 }
