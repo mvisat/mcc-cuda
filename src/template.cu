@@ -86,8 +86,8 @@ void buildCylinder(
     Minutia *minutiae, char *validArea,
     int width, int height,
     char *cylinderValidities,
-    char *cellValues,
     char *cellValidities,
+    char *cellValues,
     int numCellsInCylinder) {
   extern __shared__ int shared[];
 
@@ -169,19 +169,19 @@ void buildTemplate(
     const vector<char>& validArea,
     int width, int height,
     vector<char>& cylinderValidities,
-    vector<char>& cellValues,
-    vector<char>& cellValidities) {
+    vector<char>& cellValidities,
+    vector<char>& cellValues) {
 
   initialize();
 
   Minutia *devMinutiae;
   char *devArea;
-  char *devCylinderValidities, *devCellValues, *devCellValidities;
+  char *devCylinderValidities, *devCellValidities, *devCellValues;
   size_t devMinutiaeSize = minutiae.size() * sizeof(Minutia);
   size_t devAreaSize = width * height * sizeof(char);
   size_t devCylinderValiditiesSize = minutiae.size() * sizeof(char);
-  size_t devCellValuesSize = minutiae.size() * NC * sizeof(char);
   size_t devCellValiditiesSize = minutiae.size() * NC * sizeof(char);
+  size_t devCellValuesSize = minutiae.size() * NC * sizeof(char);
   handleError(
     cudaMalloc(&devMinutiae, devMinutiaeSize));
   handleError(
@@ -201,22 +201,22 @@ void buildTemplate(
   int sharedSize = devMinutiaeSize;
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
     devMinutiae, devArea, width, height,
-    devCylinderValidities, devCellValues, devCellValidities,
+    devCylinderValidities, devCellValidities, devCellValues,
     numCellsInCylinder);
 
   cylinderValidities.resize(minutiae.size());
-  cellValues.resize(minutiae.size() * NC);
   cellValidities.resize(minutiae.size() * NC);
+  cellValues.resize(minutiae.size() * NC);
   handleError(
     cudaMemcpy(cylinderValidities.data(), devCylinderValidities, devCylinderValiditiesSize, cudaMemcpyDeviceToHost));
   handleError(
-    cudaMemcpy(cellValues.data(), devCellValues, devCellValuesSize, cudaMemcpyDeviceToHost));
-  handleError(
     cudaMemcpy(cellValidities.data(), devCellValidities, devCellValiditiesSize, cudaMemcpyDeviceToHost));
+  handleError(
+    cudaMemcpy(cellValues.data(), devCellValues, devCellValuesSize, cudaMemcpyDeviceToHost));
 
   cudaFree(devMinutiae);
   cudaFree(devArea);
   cudaFree(devCylinderValidities);
-  cudaFree(devCellValues);
   cudaFree(devCellValidities);
+  cudaFree(devCellValues);
 }

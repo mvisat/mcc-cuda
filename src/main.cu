@@ -39,9 +39,9 @@ int main() {
   vector<char> cellValues1, cellValidities1, cylinderValidities1;
   vector<char> cellValues2, cellValidities2, cylinderValidities2;
   buildTemplateFromFile(
-    "data/1_1.txt", cylinderValidities1, cellValues1, cellValidities1);
+    "data/1_1.txt", cylinderValidities1, cellValidities1, cellValues1);
   buildTemplateFromFile(
-    "data/1_2.txt", cylinderValidities2, cellValues2, cellValidities2);
+    "data/1_2.txt", cylinderValidities2, cellValidities2, cellValues2);
 
   auto globalScore = matchTemplate(
     cylinderValidities1, cellValidities2, cellValues1,
