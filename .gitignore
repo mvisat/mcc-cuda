@@ -13,3 +13,6 @@
 
 build/
 obj/
+
+plot/*.jpg
+plot/*.txt
