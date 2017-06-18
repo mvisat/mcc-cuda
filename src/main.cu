@@ -37,16 +37,35 @@ void buildTemplateFromFile(
 
 int main() {
   vector<char> cellValues1, cellValidities1, cylinderValidities1;
-  vector<char> cellValues2, cellValidities2, cylinderValidities2;
   buildTemplateFromFile(
     "data/1_1.txt", cylinderValidities1, cellValidities1, cellValues1);
-  buildTemplateFromFile(
-    "data/1_2.txt", cylinderValidities2, cellValidities2, cellValues2);
 
-  auto globalScore = matchTemplate(
-    cylinderValidities1, cellValidities2, cellValues1,
-    cylinderValidities2, cellValidities1, cellValues2);
-  debug("Global score: %f\n", globalScore);
+  debug("Cylinder validities:\n");
+  for (int i = 0; i < cylinderValidities1.size(); ++i)
+    debug("%d ", cylinderValidities1[i]);
+  debug("\n\n");
+
+  debug("Cell validities:\n");
+  for (int i = 0; i < NS; ++i) {
+    for (int j = 0; j < NS; ++j) {
+      debug("%d ", cellValidities1[2*NC + i*NS*ND + j*ND]);
+    }
+  }
+  debug("\n\n");
+
+  debug("Cell values:\n");
+  for (int i = 0; i < NC; ++i)
+    debug("%d ", cellValues1[2*NC + i]);
+  debug("\n\n");
+
+  // vector<char> cellValues2, cellValidities2, cylinderValidities2;
+  // buildTemplateFromFile(
+  //   "data/1_2.txt", cylinderValidities2, cellValidities2, cellValues2);
+  //
+  // auto globalScore = matchTemplate(
+  //   cylinderValidities1, cellValidities2, cellValues1,
+  //   cylinderValidities2, cellValidities1, cellValues2);
+  // debug("Global score: %f\n", globalScore);
 
   return 0;
 }
