@@ -4,6 +4,7 @@
 #include "minutia.cuh"
 #include "constants.cuh"
 #include "errors.h"
+#include "debug.h"
 
 using namespace std;
 
@@ -71,7 +72,8 @@ bool edgesIntersection(
 
 
 __host__
-vector<Minutia> buildConvexHull(vector<Minutia>& minutiae) {
+vector<Minutia> buildConvexHull(vector<Minutia>& _minutiae) {
+  vector<Minutia> minutiae(_minutiae);
   int min_y = 0;
   for (int i = 1; i < minutiae.size(); ++i) {
     if (minutiae[i] < minutiae[min_y])
@@ -159,6 +161,10 @@ void fillConvexHull(Minutia *hull, const int nHull, char *area) {
 __host__
 vector<char> buildValidArea(vector<Minutia>& minutiae, int width, int height) {
   vector<Minutia> hull = buildConvexHull(minutiae);
+  debug("Convex hull points:\n%d\n%d\n%zu\n", width, height, hull.size());
+  for (int i = 0; i < hull.size(); ++i)
+    debug("%d %d\n", hull[i].x, hull[i].y);
+  debug("\n");
   hull = extendConvexHull(hull, width, height, OMEGA);
 
   size_t devHullSize = hull.size() * sizeof(Minutia);
@@ -178,6 +184,14 @@ vector<char> buildValidArea(vector<Minutia>& minutiae, int width, int height) {
   handleError(
     cudaMemcpy(ret.data(), devArea, devAreaSize, cudaMemcpyDeviceToHost));
   cudaFree(devArea);
+
+  debug("Valid area:\n");
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      debug("%d", ret[i*width + j]);
+    }
+    debug("\n");
+  }
 
   return ret;
 }
