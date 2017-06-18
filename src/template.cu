@@ -83,12 +83,13 @@ float directionalContribution(
 
 __global__
 void buildCylinder(
-    Minutia *minutiae, char *validArea,
+    Minutia *minutiae,
     int width, int height,
+    char *validArea,
+    int numCellsInCylinder,
     char *cylinderValidities,
     char *cellValidities,
-    char *cellValues,
-    int numCellsInCylinder) {
+    char *cellValues) {
   extern __shared__ int shared[];
 
   const int N = gridDim.x;
@@ -116,8 +117,8 @@ void buildCylinder(
   float halfNSj = (threadIdx.y+1) - halfNS;
   float sint, cost;
   sincosf(m.theta, &sint, &cost);
-  int pi = m.x + DELTA_S * (cost * halfNSi + sint * halfNSj);
-  int pj = m.y + DELTA_S * (-sint * halfNSi + cost * halfNSj);
+  int pi = m.x + roundf(DELTA_S * (cost * halfNSi + sint * halfNSj));
+  int pj = m.y + roundf(DELTA_S * (-sint * halfNSi + cost * halfNSj));
 
   char validity = pi >= 0 && pi < width && pj >= 0 && pj < height
     && validArea[pj * width + pi]
@@ -155,7 +156,7 @@ void buildCylinder(
   if (threadIdx.x == 0 && threadIdx.y == 0) {
     cylinderValidities[idxMinutia] = sumContributed >= MIN_M &&
       (float)sumValidities/(numCellsInCylinder) >= MIN_VC;
-    devDebug("Minutia %d:\nMIN_VC ((%d/%d) = %f) >= %f\nMIN_M %d >= %d\n\n",
+    devDebug("Minutia %2d VC: ((%3d/%d) = %.5f) >= %.2f, M: %2d >= %d\n",
       idxMinutia,
       sumValidities, numCellsInCylinder,
       (float)sumValidities/(numCellsInCylinder), MIN_VC,
@@ -200,9 +201,8 @@ void buildTemplate(
   dim3 blockDim(NS, NS);
   int sharedSize = devMinutiaeSize;
   buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
-    devMinutiae, devArea, width, height,
-    devCylinderValidities, devCellValidities, devCellValues,
-    numCellsInCylinder);
+    devMinutiae, width, height, devArea, numCellsInCylinder,
+    devCylinderValidities, devCellValidities, devCellValues);
 
   cylinderValidities.resize(minutiae.size());
   cellValidities.resize(minutiae.size() * NC);
