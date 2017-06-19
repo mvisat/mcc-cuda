@@ -124,8 +124,8 @@ void buildCylinder(
     && validArea[pj * width + pi]
     && sqrDistance(m.x, m.y, pi, pj) <= R_SQR;
 
-  int idx = idxMinutia * NC + threadIdx.x * NS * ND + threadIdx.y * ND;
-  for (int k = 0; k < ND; ++k, ++idx) {
+  int idx = idxMinutia * NC + threadIdx.y * NS * ND + threadIdx.x * ND;
+  for (int k = 0; k < ND; ++k) {
     char value = 0;
 
     if (validity) {
@@ -148,8 +148,8 @@ void buildCylinder(
       if (sum >= MU_PSI)
         value = 1;
     }
-    cellValidities[idx] = validity;
-    cellValues[idx] = value;
+    cellValidities[idx+k] = validity;
+    cellValues[idx+k] = value;
   }
 
   int sumValidities = __syncthreads_count(validity);
