@@ -63,7 +63,7 @@ void computeSimilarity(
     xorBits += __popc(xorValue);
   }
 
-  float similarity = matchable
+  float similarity = matchable && (rowBits+colBits)
     ? (1.0f - sqrtf(xorBits) / (sqrtf(rowBits)+sqrtf(colBits)))
     : 0.0f;
   matrix[row*cols + col] = similarity;
