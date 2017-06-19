@@ -15,4 +15,4 @@ for _ in range(n):
   x, y = int(s[0]), int(s[1])
   px[x,y] = 255,255,255
 f.close()
-im.save('minutiae.jpg')
+im.save('minutiae.png')

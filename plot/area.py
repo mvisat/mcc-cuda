@@ -15,4 +15,4 @@ for i in range(h):
       px[j,i] = 255,255,255
     else:
       px[j,i] = 0,0,0
-im.save('area.jpg')
+im.save('area.png')

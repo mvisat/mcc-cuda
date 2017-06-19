@@ -16,4 +16,4 @@ for _ in range(n):
   arr.append((x,y))
 arr.append(arr[0])
 draw.line(arr)
-im.save('hull.jpg')
+im.save('hull.png')
