@@ -219,8 +219,8 @@ vector<char> buildValidArea(const vector<Minutia>& minutiae,
   int threadPerDim = 32;
   dim3 blockCount(ceilMod(width, threadPerDim), ceilMod(height, threadPerDim));
   dim3 circleBlockCount(
-    ceilMod(2*OMEGA, threadPerDim),
-    ceilMod(2*OMEGA, threadPerDim));
+    ceilMod(2*OMEGA+1, threadPerDim),
+    ceilMod(2*OMEGA+1, threadPerDim));
   dim3 threadCount(threadPerDim, threadPerDim);
 
   fillConvexHull<<<blockCount, threadCount>>>(
