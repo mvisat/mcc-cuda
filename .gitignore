@@ -16,4 +16,5 @@ obj/
 output/
 
 plot/*.jpg
+plot/*.png
 plot/*.txt
