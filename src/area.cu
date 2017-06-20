@@ -134,19 +134,25 @@ void fillConvexHull(Minutia *hull, const int nHull,
   int y = blockIdx.y * blockDim.y + threadIdx.y;
   if (x >= width || y >= height) return;
 
-  bool ok = true;
+  extern __shared__ int shared[];
+  Minutia *sharedHull = (Minutia*)shared;
+  int idx = threadIdx.y * blockDim.x + threadIdx.x;
+  if (idx < nHull) sharedHull[idx] = hull[idx];
+  __syncthreads();
+
+  char ok = 1;
   for (int i = 0; i < nHull; ++i) {
-    Minutia a(hull[i]);
-    Minutia b(hull[(i+1) % nHull]);
+    Minutia a(sharedHull[i]);
+    Minutia b(sharedHull[(i+1) % nHull]);
     if (lineTurn(x, y, a.x, a.y, b.x, b.y) < 0) {
-      ok = false;
+      ok = 0;
       if (sqrDistanceFromSegment(x, y, a.x, a.y, b.x, b.y) <= OMEGA*OMEGA) {
         area[y*width + x] = 1;
         return;
       }
     }
   }
-  if (ok) area[y*width + x] = 1;
+  area[y*width + x] = ok;
 }
 
 __host__
@@ -164,14 +170,12 @@ vector<char> buildValidArea(const vector<Minutia>& minutiae,
     cudaMemcpy(devHull, hull.data(), devHullSize, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devArea, devAreaSize));
-  handleError(
-    cudaMemset(devArea, 0, devAreaSize));
 
   int threadPerDim = 32;
   dim3 blockCount(ceilMod(width, threadPerDim), ceilMod(height, threadPerDim));
   dim3 threadCount(threadPerDim, threadPerDim);
 
-  fillConvexHull<<<blockCount, threadCount>>>(
+  fillConvexHull<<<blockCount, threadCount, devHullSize>>>(
     devHull, hull.size(), width, height, devArea);
 
   vector<char> ret(width * height);
