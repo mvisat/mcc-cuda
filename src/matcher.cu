@@ -70,7 +70,8 @@ void computeSimilarity(
 }
 
 __host__
-float LSS(vector<float>& matrix, int rows, int cols) {
+float LSS(const vector<float>& _matrix, int rows, int cols) {
+  auto matrix(_matrix);
   auto sigmoid = [&](int value, float tau, float mu) {
     return 1.0f / (1.0f + expf(-tau * (value-mu)));
   };
@@ -90,7 +91,8 @@ float matchTemplate(
     const vector<char>& cellValues1,
     const vector<char>& cylinderValidities2,
     const vector<char>& cellValidities2,
-    const vector<char>& cellValues2) {
+    const vector<char>& cellValues2,
+    vector<float>& matrix) {
 
   int rows = cylinderValidities1.size();
   int cols = cylinderValidities2.size();
@@ -168,18 +170,9 @@ float matchTemplate(
   handleError(
     cudaPeekAtLastError());
 
-  vector<float> matrix(rows*cols);
+  matrix.resize(rows*cols);
   handleError(
     cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
-
-  debug("Similarity matrix:\n");
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      debug("%f ", matrix[i*cols + j]);
-    }
-    debug("\n");
-  }
-  debug("\n");
 
   cudaFree(devCylinderValidities1);
   cudaFree(devCylinderValidities2);

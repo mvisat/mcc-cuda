@@ -10,6 +10,7 @@ float matchTemplate(
   const std::vector<char>& cellValues1,
   const std::vector<char>& cylinderValidities2,
   const std::vector<char>& cellValidities2,
-  const std::vector<char>& cellValues2);
+  const std::vector<char>& cellValues2,
+  std::vector<float>& matrix);
 
 #endif
