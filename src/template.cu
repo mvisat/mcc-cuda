@@ -28,25 +28,6 @@ __host__ void initialize() {
 }
 
 __host__ __device__ __inline__
-float gaussian(float value) {
-  const float GS_DIV = sqrtf(M_2PI) * SIGMA_S;
-  return expf(-(value*value)/SIGMA_2S_SQR) / GS_DIV;
-}
-
-// http://www.wolframalpha.com/input/?i=integrate+(e%5E(-(t%5E2)%2F(2(x%5E2)))+dt)
-__host__ __device__ __inline__
-float gaussianIntegral(float value) {
-  const float a = sqrtf(M_PI_2) * SIGMA_D;
-  const float b = M_SQRT2 * SIGMA_D;
-  auto integrate = [&](float val) {
-    return a * erff(val/b);
-  };
-  return rsqrtf(M_2PI) *
-    (integrate(value+DELTA_D_2)-integrate(value-DELTA_D_2))
-    / SIGMA_D;
-}
-
-__host__ __device__ __inline__
 int sqrDistance(int x1, int y1, int x2, int y2) {
   int dx = x1 - x2;
   int dy = y1 - y2;
@@ -56,12 +37,6 @@ int sqrDistance(int x1, int y1, int x2, int y2) {
 __host__ __device__ __inline__
 float distance(int x1, int y1, int x2, int y2) {
   return sqrtf(sqrDistance(x1, y1, x2, y2));
-}
-
-__host__ __device__ __inline__
-float spatialContribution(
-    int mt_x, int mt_y, int pi, int pj) {
-  return gaussian(distance(mt_x, mt_y, pi, pj));
 }
 
 __host__ __device__ __inline__
@@ -75,9 +50,26 @@ float angle(float theta1, float theta2) {
 }
 
 __host__ __device__ __inline__
+float spatialContribution(
+    int mt_x, int mt_y, int pi, int pj) {
+  auto gaussian = [&](int t_sqr) -> float {
+    return I_2_SIGMA_S_SQRT_PI * expf(-t_sqr * I_2_SIGMA_S_SQR);
+  };
+  return gaussian(sqrDistance(mt_x, mt_y, pi, pj));
+}
+
+__host__ __device__ __inline__
 float directionalContribution(
     float m_theta, float mt_theta, float dphik) {
-  return gaussianIntegral(
+  // http://www.wolframalpha.com/input/?i=integrate+(e%5E(-(t%5E2)%2F(2(x%5E2)))+dt)
+  auto integrate = [&](float val) -> float {
+    return SQRT_PI_2_SIGMA_D * erff(val * I_SQRT_2_SIGMA_D);
+  };
+  auto gaussian = [&](float val) -> float {
+    return I_SQRT_2_PI_SIGMA_D *
+      (integrate(val+DELTA_D_2)-integrate(val-DELTA_D_2));
+  };
+  return gaussian(
     angle(dphik, angle(m_theta, mt_theta)));
 }
 
