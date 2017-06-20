@@ -23,6 +23,15 @@ int sqrDistance(int x1, int y1, int x2, int y2) {
   return dx*dx + dy*dy;
 }
 
+__host__ __device__ __inline__
+int sqrDistanceFromSegment(int x, int y, int x1, int y1, int x2, int y2) {
+  auto dist = sqrDistance(x1, y1, x2, y2);
+  if (dist == 0) return sqrDistance(x, y, x1, y1);
+  auto p = (x-x1)*(x2-x1) + (y-y1)*(y2-y1);
+  float t = fmaxf(0.0f, fminf(1.0f, (float)p/dist));
+  return sqrDistance(x, y, x1 + t * (x2-x1), y1 + t * (y2-y1));
+}
+
 /* Check line's turn created by 3 points (a -> b -> c)
  *-1: turn right (clockwise)
  * 0: collinear
@@ -118,99 +127,41 @@ vector<Minutia> buildConvexHull(const vector<Minutia>& _minutiae) {
 }
 
 
-__host__
-vector<Point> extendConvexHull(const vector<Minutia>& hull,
-    const int width, const int height, const int radius) {
-  vector<Point> extended;
-  for (int i = 1; i <= hull.size(); ++i) {
-    Minutia p1(hull[i-1]);
-    Minutia p2(hull[i%hull.size()]);
-    int dx = p2.x-p1.x, dy = p2.y-p1.y;
-    float rdist = rsqrtf(dx*dx + dy*dy);
-    int dxr = (dy * radius) * rdist;
-    int dyr = (-dx * radius) * rdist;
-    extended.emplace_back(p1.x, p1.y);
-    extended.emplace_back(p1.x + dxr, p1.y + dyr);
-    extended.emplace_back(p2.x + dxr, p2.y + dyr);
-    extended.emplace_back(p2.x, p2.y);
-  }
-  return extended;
-}
-
 __global__
-void fillConvexHull(Minutia *hull, Point *boxes, const int nHull,
+void fillConvexHull(Minutia *hull, const int nHull,
     const int width, const int height, char *area) {
   int x = blockIdx.x * blockDim.x + threadIdx.x;
   int y = blockIdx.y * blockDim.y + threadIdx.y;
   if (x >= width || y >= height) return;
 
-  // fill original convex hull
   bool ok = true;
   for (int i = 0; i < nHull; ++i) {
-    int b = (i+1) % nHull;
-    if (lineTurn(hull[i].x, hull[i].y, hull[b].x, hull[b].y, x, y) < 0) {
+    Minutia a(hull[i]);
+    Minutia b(hull[(i+1) % nHull]);
+    if (lineTurn(x, y, a.x, a.y, b.x, b.y) < 0) {
       ok = false;
-      break;
-    }
-  }
-  if (ok) {
-    area[y*width + x] = 1;
-    return;
-  }
-
-  // fill extended area
-  for (int i = 0; i < nHull; ++i) {
-    bool ok = true;
-    for (int j = 0; j < 4; ++j) {
-      int k = i*4 + j;
-      int l = i*4 + (j+1)%4;
-      if (lineTurn(boxes[k].x, boxes[k].y, boxes[l].x, boxes[l].y, x, y) < 0) {
-        ok = false;
-        break;
+      if (sqrDistanceFromSegment(x, y, a.x, a.y, b.x, b.y) <= OMEGA*OMEGA) {
+        area[y*width + x] = 1;
+        return;
       }
     }
-    if (ok) {
-      area[y*width + x] = 1;
-      return;
-    }
   }
-}
-
-__global__
-void fillHullCircle(Minutia *hull, const int nHull, const int radius,
-    const int width, const int height, char *area) {
-  int dx = blockIdx.x * blockDim.x + threadIdx.x - radius;
-  int dy = blockIdx.y * blockDim.y + threadIdx.y - radius;
-  if (dx*dx + dy*dy > radius*radius) return;
-
-  for (int i = 0; i < nHull; ++i) {
-    int x = hull[i].x + dx;
-    int y = hull[i].y + dy;
-    if (x < 0 || x >= width || y < 0 || y >= height) continue;
-    area[y*width + x] = 1;
-  }
+  if (ok) area[y*width + x] = 1;
 }
 
 __host__
 vector<char> buildValidArea(const vector<Minutia>& minutiae,
     const int width, const int height) {
   auto hull = buildConvexHull(minutiae);
-  auto boxes = extendConvexHull(hull, width, height, OMEGA);
 
   size_t devHullSize = hull.size() * sizeof(Minutia);
-  size_t devBoxesSize = boxes.size() * sizeof(Point);
   size_t devAreaSize = width * height * sizeof(char);
   Minutia *devHull;
-  Point *devBoxes;
   char *devArea;
   handleError(
     cudaMalloc(&devHull, devHullSize));
   handleError(
     cudaMemcpy(devHull, hull.data(), devHullSize, cudaMemcpyHostToDevice));
-  handleError(
-    cudaMalloc(&devBoxes, devBoxesSize));
-  handleError(
-    cudaMemcpy(devBoxes, boxes.data(), devBoxesSize, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devArea, devAreaSize));
   handleError(
@@ -218,21 +169,15 @@ vector<char> buildValidArea(const vector<Minutia>& minutiae,
 
   int threadPerDim = 32;
   dim3 blockCount(ceilMod(width, threadPerDim), ceilMod(height, threadPerDim));
-  dim3 circleBlockCount(
-    ceilMod(2*OMEGA+1, threadPerDim),
-    ceilMod(2*OMEGA+1, threadPerDim));
   dim3 threadCount(threadPerDim, threadPerDim);
 
   fillConvexHull<<<blockCount, threadCount>>>(
-    devHull, devBoxes, hull.size(), width, height, devArea);
-  fillHullCircle<<<circleBlockCount, threadCount>>>(
-    devHull, hull.size(), OMEGA, width, height, devArea);
+    devHull, hull.size(), width, height, devArea);
 
   vector<char> ret(width * height);
   handleError(
     cudaMemcpy(ret.data(), devArea, devAreaSize, cudaMemcpyDeviceToHost));
   cudaFree(devHull);
-  cudaFree(devBoxes);
   cudaFree(devArea);
 
 #ifdef DEBUG
