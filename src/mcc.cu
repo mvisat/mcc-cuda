@@ -9,6 +9,7 @@
 #include "template.cuh"
 #include "binarization.cuh"
 #include "matcher.cuh"
+#include "consolidation.cuh"
 #include "errors.h"
 
 using namespace std;
@@ -93,19 +94,35 @@ bool MCC::match(const char *target,
   MCC mcc(target);
   if (!mcc.load() || !mcc.build()) return false;
 
+  n = minutiae.size();
+  m = mcc.minutiae.size();
+
+  float *devMatrix;
+  size_t devMatrixSize = n * m * sizeof(float);
+  handleError(
+    cudaMalloc(&devMatrix, devMatrixSize));
+
   auto begin = std::chrono::high_resolution_clock::now();
-  similarity = devMatchTemplate(
-    devMinutiae, minutiae.size(),
+  devMatchTemplate(
+    devMinutiae, n,
     devCylinderValidities, devBinarizedValidities, devBinarizedValues,
-    mcc.devMinutiae, mcc.minutiae.size(),
+    mcc.devMinutiae, m,
     mcc.devCylinderValidities, mcc.devBinarizedValidities, mcc.devBinarizedValues,
-    matrix);
+    devMatrix);
   auto end = chrono::high_resolution_clock::now();
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
   cout << "Time taken to match templates: " << duration << " microseconds\n";
 
-  n = minutiae.size();
-  m = mcc.minutiae.size();
+  matrix.resize(n * m);
+  handleError(
+    cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
+  cudaFree(devMatrix);
+
+  begin = std::chrono::high_resolution_clock::now();
+  similarity = LSS(matrix, n, m);
+  end = chrono::high_resolution_clock::now();
+  duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
+  cout << "Time taken to compute global score: " << duration << " microseconds\n";
 
   mcc.dispose();
   return true;

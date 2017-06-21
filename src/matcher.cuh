@@ -6,7 +6,7 @@
 #include "minutia.cuh"
 
 __host__
-float matchTemplate(
+void matchTemplate(
   const std::vector<Minutia>& minutiae1,
   const std::vector<char>& cylinderValidities1,
   const std::vector<char>& cellValidities1,
@@ -18,7 +18,7 @@ float matchTemplate(
   std::vector<float>& matrix);
 
 __host__
-float devMatchTemplate(
+void devMatchTemplate(
   Minutia *devMinutiae1, const int n,
   char *devCylinderValidities1,
   unsigned int *devBinarizedValidities1,
@@ -27,6 +27,6 @@ float devMatchTemplate(
   char *devCylinderValidities2,
   unsigned int *devBinarizedValidities2,
   unsigned int *devBinarizedValues2,
-  std::vector<float>& matrix);
+  float *devMatrix);
 
 #endif

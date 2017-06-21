@@ -8,6 +8,7 @@
 #include "matcher.cuh"
 #include "io.cuh"
 #include "mcc.cuh"
+#include "consolidation.cuh"
 
 using namespace std;
 
@@ -52,10 +53,11 @@ bool buildSimilarityFromTemplate(
     return false;
 
   vector<float> matrix;
-  auto similarity = matchTemplate(
+  matchTemplate(
     minutiae1, cylinderValidities1, cellValidities1, cellValues1,
     minutiae2, cylinderValidities2, cellValidities2, cellValues2,
     matrix);
+  auto similarity = LSS(matrix, m1, m2);
   printf("Similarity: %f\n", similarity);
   return saveSimilarityToFile(output, m1, m2, matrix);
 }
