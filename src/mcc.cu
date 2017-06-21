@@ -7,6 +7,7 @@
 #include "io.cuh"
 #include "area.cuh"
 #include "template.cuh"
+#include "binarization.cuh"
 #include "matcher.cuh"
 #include "errors.h"
 
@@ -42,13 +43,18 @@ bool MCC::build() {
   handleError(
     cudaMalloc(&devCylinderValidities, devCylinderValiditiesSize));
 
-  size_t devCellValiditiesSize = minutiae.size() * NC * sizeof(char);
+  size_t devCellSize = minutiae.size() * NC * sizeof(char);
   handleError(
-    cudaMalloc(&devCellValidities, devCellValiditiesSize));
+    cudaMalloc(&devCellValidities, devCellSize));
+  handleError(
+    cudaMalloc(&devCellValues, devCellSize));
 
-  size_t devCellValuesSize = minutiae.size() * NC * sizeof(char);
+  int intPerCylinder = NC/BITS;
+  size_t devBinarizedSize = minutiae.size() * intPerCylinder * sizeof(unsigned int);
   handleError(
-    cudaMalloc(&devCellValues, devCellValuesSize));
+    cudaMalloc(&devBinarizedValidities, devBinarizedSize));
+  handleError(
+    cudaMalloc(&devBinarizedValues, devBinarizedSize));
 
   auto begin = std::chrono::high_resolution_clock::now();
   devBuildValidArea(minutiae, width, height, devArea);
@@ -58,6 +64,9 @@ bool MCC::build() {
     devCylinderValidities,
     devCellValidities,
     devCellValues);
+  devBinarizedTemplate(minutiae.size(),
+    devCellValidities, devCellValues,
+    devBinarizedValidities, devBinarizedValues);
   auto end = chrono::high_resolution_clock::now();
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
   cout << "Time taken to build template: " << duration << " microseconds\n";
@@ -73,6 +82,8 @@ void MCC::dispose() {
   cudaFree(devCylinderValidities);
   cudaFree(devCellValidities);
   cudaFree(devCellValues);
+  cudaFree(devBinarizedValidities);
+  cudaFree(devBinarizedValues);
 
   built = false;
 }
@@ -85,9 +96,9 @@ bool MCC::match(const char *target,
   auto begin = std::chrono::high_resolution_clock::now();
   similarity = devMatchTemplate(
     devMinutiae, minutiae.size(),
-    devCylinderValidities, devCellValidities, devCellValues,
+    devCylinderValidities, devBinarizedValidities, devBinarizedValues,
     mcc.devMinutiae, mcc.minutiae.size(),
-    mcc.devCylinderValidities, mcc.devCellValidities, mcc.devCellValues,
+    mcc.devCylinderValidities, mcc.devBinarizedValidities, mcc.devBinarizedValues,
     matrix);
   auto end = chrono::high_resolution_clock::now();
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();

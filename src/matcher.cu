@@ -1,5 +1,6 @@
-#include "minutia.cuh"
 #include "matcher.cuh"
+#include "binarization.cuh"
+#include "minutia.cuh"
 #include "constants.cuh"
 #include "util.cuh"
 #include "errors.h"
@@ -10,29 +11,6 @@
 #include <functional>
 
 using namespace std;
-
-__global__
-void binarizedTemplate(
-    char *cellValidities,
-    char *cellValues,
-    unsigned int *binarizedValidities,
-    unsigned int *binarizedValues) {
-  int idxMinutia = blockIdx.x;
-  int idxInt = threadIdx.x;
-  int intPerCylinder = NC / BITS;
-  int idx = idxMinutia * intPerCylinder + idxInt;
-  int idxBit = idxMinutia * NC + idxInt * BITS;
-
-  unsigned int validity = 0, value = 0;
-  for (int i = 0; i < BITS; ++i) {
-    validity <<= 1U;
-    validity |= cellValidities[idxBit+i];
-    value <<= 1U;
-    value |= cellValues[idxBit+i];
-  }
-  binarizedValidities[idx] = validity;
-  binarizedValues[idx] = value;
-}
 
 __global__
 void computeSimilarity(
@@ -98,38 +76,13 @@ __host__
 float devMatchTemplate(
     Minutia *devMinutiae1, const int n,
     char *devCylinderValidities1,
-    char *devCellValidities1,
-    char *devCellValues1,
+    unsigned int *devBinarizedValidities1,
+    unsigned int *devBinarizedValues1,
     Minutia *devMinutiae2, const int m,
     char *devCylinderValidities2,
-    char *devCellValidities2,
-    char *devCellValues2,
+    unsigned int *devBinarizedValidities2,
+    unsigned int *devBinarizedValues2,
     vector<float> &matrix) {
-
-  int intPerCylinder = NC/BITS;
-  unsigned int *devBinarizedValidities1, *devBinarizedValues1;
-  unsigned int *devBinarizedValidities2, *devBinarizedValues2;
-  size_t devBinarizedValidities1Size = n * intPerCylinder * sizeof(unsigned int);
-  size_t devBinarizedValues1Size = n * intPerCylinder * sizeof(unsigned int);
-  size_t devBinarizedValidities2Size = m * intPerCylinder * sizeof(unsigned int);
-  size_t devBinarizedValues2Size = m * intPerCylinder * sizeof(unsigned int);
-  handleError(
-    cudaMalloc(&devBinarizedValidities1, devBinarizedValidities1Size));
-  handleError(
-    cudaMalloc(&devBinarizedValidities2, devBinarizedValidities2Size));
-  handleError(
-    cudaMalloc(&devBinarizedValues1, devBinarizedValues1Size));
-  handleError(
-    cudaMalloc(&devBinarizedValues2, devBinarizedValues2Size));
-
-  binarizedTemplate<<<n, intPerCylinder>>>(
-    devCellValidities1, devCellValues1, devBinarizedValidities1, devBinarizedValues1);
-  handleError(
-    cudaPeekAtLastError());
-  binarizedTemplate<<<m, intPerCylinder>>>(
-    devCellValidities2, devCellValues2, devBinarizedValidities2, devBinarizedValues2);
-  handleError(
-    cudaPeekAtLastError());
 
   float *devMatrix;
   size_t devMatrixSize = n * m * sizeof(float);
@@ -150,10 +103,6 @@ float devMatchTemplate(
   handleError(
     cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
 
-  cudaFree(devBinarizedValidities1);
-  cudaFree(devBinarizedValidities2);
-  cudaFree(devBinarizedValues1);
-  cudaFree(devBinarizedValues2);
   cudaFree(devMatrix);
 
   return LSS(matrix, n, m);
@@ -216,11 +165,34 @@ float matchTemplate(
   handleError(
     cudaMemcpy(devCellValues2, cellValues2.data(), devCellValues2Size, cudaMemcpyHostToDevice));
 
+  int intPerCylinder = NC/BITS;
+  unsigned int *devBinarizedValidities1, *devBinarizedValues1;
+  unsigned int *devBinarizedValidities2, *devBinarizedValues2;
+  size_t devBinarizedValidities1Size = minutiae1.size() * intPerCylinder * sizeof(unsigned int);
+  size_t devBinarizedValues1Size = minutiae1.size() * intPerCylinder * sizeof(unsigned int);
+  size_t devBinarizedValidities2Size = minutiae2.size() * intPerCylinder * sizeof(unsigned int);
+  size_t devBinarizedValues2Size = minutiae2.size() * intPerCylinder * sizeof(unsigned int);
+  handleError(
+    cudaMalloc(&devBinarizedValidities1, devBinarizedValidities1Size));
+  handleError(
+    cudaMalloc(&devBinarizedValidities2, devBinarizedValidities2Size));
+  handleError(
+    cudaMalloc(&devBinarizedValues1, devBinarizedValues1Size));
+  handleError(
+    cudaMalloc(&devBinarizedValues2, devBinarizedValues2Size));
+
+  devBinarizedTemplate(minutiae1.size(),
+    devCellValidities1, devCellValues1,
+    devBinarizedValidities1, devBinarizedValues1);
+  devBinarizedTemplate(minutiae2.size(),
+    devCellValidities2, devCellValues2,
+    devBinarizedValidities2, devBinarizedValues2);
+
   auto ret = devMatchTemplate(
     devMinutiae1, minutiae1.size(),
-    devCylinderValidities1, devCellValidities1, devCellValues1,
+    devCylinderValidities1, devBinarizedValidities1, devBinarizedValues1,
     devMinutiae2, minutiae2.size(),
-    devCylinderValidities2, devCellValidities2, devCellValues2,
+    devCylinderValidities2, devBinarizedValidities2, devBinarizedValues2,
     matrix);
 
   cudaFree(devMinutiae1);
@@ -231,6 +203,10 @@ float matchTemplate(
   cudaFree(devCellValidities2);
   cudaFree(devCellValues1);
   cudaFree(devCellValues2);
+  cudaFree(devBinarizedValidities1);
+  cudaFree(devBinarizedValidities2);
+  cudaFree(devBinarizedValues1);
+  cudaFree(devBinarizedValues2);
 
   return ret;
 }

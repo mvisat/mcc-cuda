@@ -31,6 +31,8 @@ private:
   char *devCylinderValidities;
   char *devCellValidities;
   char *devCellValues;
+  unsigned int *devBinarizedValidities;
+  unsigned int *devBinarizedValues;
 };
 
 #endif

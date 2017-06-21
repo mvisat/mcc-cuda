@@ -21,12 +21,12 @@ __host__
 float devMatchTemplate(
   Minutia *devMinutiae1, const int n,
   char *devCylinderValidities1,
-  char *devCellValidities1,
-  char *devCellValues1,
+  unsigned int *devBinarizedValidities1,
+  unsigned int *devBinarizedValues1,
   Minutia *devMinutiae2, const int m,
   char *devCylinderValidities2,
-  char *devCellValidities2,
-  char *devCellValues2,
+  unsigned int *devBinarizedValidities2,
+  unsigned int *devBinarizedValues2,
   std::vector<float>& matrix);
 
 #endif
