@@ -93,6 +93,7 @@ void saveTemplateToFile(
     const vector<char> &cellValidities,
     const vector<char> &cellValues) {
   ofstream ostream(output);
+  ostream.precision(numeric_limits<double>::max_digits10);
   ostream << width << endl;
   ostream << height << endl;
   ostream << dpi << endl;
