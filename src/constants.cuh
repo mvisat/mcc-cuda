@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#define EPS 1e-9f
+#define EPS 1e-6f
 #ifndef M_PI
   #define M_PI 3.141592653589793238462643383279502884197169399375105820974f
 #endif
