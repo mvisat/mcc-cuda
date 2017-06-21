@@ -47,12 +47,19 @@ void loadTemplateFromFile(
   }
   istream >> *m;
   cylinderValidities.resize(*m);
-  cellValidities.reserve(NC);
-  cellValues.reserve(NC);
+  cellValidities.reserve(*m * NC);
+  cellValues.reserve(*m * NC);
   for (int l = 0; l < *m; ++l) {
     string s;
     istream >> s;
     cylinderValidities[l] = s.compare("True") == 0 ? 1 : 0;
+    if (!cylinderValidities[l]) {
+      for (int i = 0; i < NC; ++i) {
+        cellValidities.push_back(0);
+        cellValues.push_back(0);
+      }
+      continue;
+    }
     for (int i = 0; i < NS; ++i) {
       for (int j = 0; j < NS; ++j) {
         int validity;
