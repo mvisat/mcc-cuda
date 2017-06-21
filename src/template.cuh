@@ -8,8 +8,7 @@
 __host__
 void buildTemplate(
   const std::vector<Minutia>&,
-  const std::vector<char>&,
-  int, int,
+  const int, const int,
   std::vector<char>&,
   std::vector<char>&,
   std::vector<char>&);

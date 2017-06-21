@@ -10,7 +10,6 @@
 #include "errors.h"
 #include "debug.h"
 #include "constants.cuh"
-#include "area.cuh"
 #include "template.cuh"
 #include "matcher.cuh"
 
@@ -176,8 +175,7 @@ void buildTemplateFromFile(
   loadMinutiaeFromFile(input, &width, &height, &dpi, &n, minutiae);
 
   vector<char> cylinderValidities, cellValidities, cellValues;
-  auto area = buildValidArea(minutiae, width, height);
-  buildTemplate(minutiae, area, width, height,
+  buildTemplate(minutiae, width, height,
     cylinderValidities, cellValidities, cellValues);
   handleError(cudaDeviceSynchronize());
 

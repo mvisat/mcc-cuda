@@ -1,6 +1,7 @@
 #include <vector>
 
 #include "minutia.cuh"
+#include "area.cuh"
 #include "constants.cuh"
 #include "util.cuh"
 #include "errors.h"
@@ -138,13 +139,14 @@ void buildCylinder(
 __host__
 void buildTemplate(
     const vector<Minutia>& minutiae,
-    const vector<char>& validArea,
-    int width, int height,
+    const int width, const int height,
     vector<char>& cylinderValidities,
     vector<char>& cellValidities,
     vector<char>& cellValues) {
 
   initialize();
+
+  auto area = buildValidArea(minutiae, width, height);
 
   Minutia *devMinutiae;
   char *devArea;
@@ -161,7 +163,7 @@ void buildTemplate(
   handleError(
     cudaMalloc(&devArea, devAreaSize));
   handleError(
-    cudaMemcpy(devArea, validArea.data(), devAreaSize, cudaMemcpyHostToDevice));
+    cudaMemcpy(devArea, area.data(), devAreaSize, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCylinderValidities, devCylinderValiditiesSize));
   handleError(
