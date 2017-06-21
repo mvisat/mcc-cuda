@@ -1,6 +1,7 @@
 #include "minutia.cuh"
 #include "matcher.cuh"
 #include "constants.cuh"
+#include "util.cuh"
 #include "errors.h"
 #include "debug.h"
 
@@ -8,19 +9,7 @@
 #include <algorithm>
 #include <functional>
 
-#define ceilMod(x,y) (x+y-1)/y
-
 using namespace std;
-
-__host__ __device__ __inline__
-float angle(float theta1, float theta2) {
-  float diff = theta1-theta2;
-  if (diff < -M_PI)
-    return M_2PI + diff;
-  if (diff >= M_PI)
-    return -M_2PI + diff;
-  return diff;
-}
 
 __global__
 void binarizedTemplate(
@@ -60,11 +49,8 @@ void computeSimilarity(
   int col = blockIdx.x * blockDim.x + threadIdx.x;
   if (row >= rows || col >= cols) return;
 
-  auto definitelyGreaterThan = [&](float a, float b) -> bool {
-    return (a - b) > ((fabsf(a) < fabsf(b) ? fabsf(b) : fabsf(a)) * EPS);
-  };
   if (!cylinderValidities1[row] || !cylinderValidities2[col] ||
-      definitelyGreaterThan(
+      floatGreater(
         fabsf(angle(minutiae1[row].theta, minutiae2[col].theta)),
         DELTA_THETA)) {
     matrix[row*cols + col] = 0.0f;

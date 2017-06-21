@@ -1,9 +1,10 @@
 #include <vector>
 
-#include "errors.h"
-#include "debug.h"
 #include "minutia.cuh"
 #include "constants.cuh"
+#include "util.cuh"
+#include "errors.h"
+#include "debug.h"
 
 using namespace std;
 
@@ -25,28 +26,6 @@ __host__ void initialize() {
     }
   }
   initialized = true;
-}
-
-__host__ __device__ __inline__
-int sqrDistance(int x1, int y1, int x2, int y2) {
-  int dx = x1 - x2;
-  int dy = y1 - y2;
-  return dx*dx + dy*dy;
-}
-
-__host__ __device__ __inline__
-float distance(int x1, int y1, int x2, int y2) {
-  return sqrtf(sqrDistance(x1, y1, x2, y2));
-}
-
-__host__ __device__ __inline__
-float angle(float theta1, float theta2) {
-  float diff = theta1-theta2;
-  if (diff < -M_PI)
-    return M_2PI + diff;
-  if (diff >= M_PI)
-    return -M_2PI + diff;
-  return diff;
 }
 
 __host__ __device__ __inline__
