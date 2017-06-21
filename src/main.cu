@@ -176,8 +176,8 @@ void buildSimilarityFromFile(
 
   vector<float> matrix;
   auto similarity = matchTemplate(
-    cylinderValidities1, cellValidities1, cellValues1,
-    cylinderValidities2, cellValidities2, cellValues2,
+    minutiae1, cylinderValidities1, cellValidities1, cellValues1,
+    minutiae2, cylinderValidities2, cellValidities2, cellValues2,
     matrix);
   printf("Similarity: %f\n", similarity);
   saveSimilarityToFile(output, m1, m2, matrix);

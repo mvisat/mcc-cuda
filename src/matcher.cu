@@ -1,3 +1,4 @@
+#include "minutia.cuh"
 #include "matcher.cuh"
 #include "constants.cuh"
 #include "errors.h"
@@ -10,6 +11,16 @@
 #define ceilMod(x,y) (x+y-1)/y
 
 using namespace std;
+
+__host__ __device__ __inline__
+float angle(float theta1, float theta2) {
+  float diff = theta1-theta2;
+  if (diff < -M_PI)
+    return M_2PI + diff;
+  if (diff >= M_PI)
+    return -M_2PI + diff;
+  return diff;
+}
 
 __global__
 void binarizedTemplate(
@@ -36,8 +47,12 @@ void binarizedTemplate(
 
 __global__
 void computeSimilarity(
+    Minutia *minutiae1,
+    char *cylinderValidities1,
     unsigned int *binarizedValidities1,
     unsigned int *binarizedValues1,
+    Minutia *minutiae2,
+    char *cylinderValidities2,
     unsigned int *binarizedValidities2,
     unsigned int *binarizedValues2,
     float *matrix, int rows, int cols) {
@@ -45,26 +60,36 @@ void computeSimilarity(
   int col = blockIdx.x * blockDim.x + threadIdx.x;
   if (row >= rows || col >= cols) return;
 
+  auto definitelyGreaterThan = [&](float a, float b) -> bool {
+    return (a - b) > ((fabsf(a) < fabsf(b) ? fabsf(b) : fabsf(a)) * EPS);
+  };
+  if (!cylinderValidities1[row] || !cylinderValidities2[col] ||
+      definitelyGreaterThan(
+        fabsf(angle(minutiae1[row].theta, minutiae2[col].theta)),
+        DELTA_THETA)) {
+    matrix[row*cols + col] = 0.0f;
+    return;
+  }
+
   int intPerCylinder = NC/BITS;
   int rowIdx = row * intPerCylinder;
   int colIdx = col * intPerCylinder;
 
-  unsigned int matchable = 0;
-  int rowBits = 0, colBits = 0, xorBits = 0;
-
+  int maskBits = 0, rowBits = 0, colBits = 0, xorBits = 0;
   for (int i = 0; i < intPerCylinder; ++i) {
     auto mask = binarizedValidities1[rowIdx+i] & binarizedValidities2[colIdx+i];
     auto rowValue = binarizedValues1[rowIdx+i] & mask;
     auto colValue = binarizedValues2[colIdx+i] & mask;
     auto xorValue = rowValue ^ colValue;
-    matchable += mask;
+    maskBits += __popc(mask);
     rowBits += __popc(rowValue);
     colBits += __popc(colValue);
     xorBits += __popc(xorValue);
   }
 
-  float similarity = matchable && (rowBits+colBits)
-    ? (1.0f - sqrtf(xorBits) / (sqrtf(rowBits)+sqrtf(colBits)))
+  bool matchable = maskBits >= MIN_ME_CELLS && (rowBits || colBits);
+  float similarity = matchable
+    ? (1 - sqrtf(xorBits) / (sqrtf(rowBits)+sqrtf(colBits)))
     : 0.0f;
   matrix[row*cols + col] = similarity;
 }
@@ -86,9 +111,11 @@ float LSS(const vector<float>& _matrix, int rows, int cols) {
 
 __host__
 float matchTemplate(
+    const vector<Minutia>& minutiae1,
     const vector<char>& cylinderValidities1,
     const vector<char>& cellValidities1,
     const vector<char>& cellValues1,
+    const vector<Minutia>& minutiae2,
     const vector<char>& cylinderValidities2,
     const vector<char>& cellValidities2,
     const vector<char>& cellValues2,
@@ -97,15 +124,26 @@ float matchTemplate(
   int rows = cylinderValidities1.size();
   int cols = cylinderValidities2.size();
 
+  Minutia *devMinutiae1, *devMinutiae2;
   char *devCylinderValidities1, *devCylinderValidities2;
   char *devCellValidities1, *devCellValidities2;
   char *devCellValues1, *devCellValues2;
+  size_t devMinutiae1Size = minutiae1.size() * sizeof(Minutia);
+  size_t devMinutiae2Size = minutiae2.size() * sizeof(Minutia);
   size_t devCylinderValidities1Size = cylinderValidities1.size() * sizeof(char);
   size_t devCylinderValidities2Size = cylinderValidities2.size() * sizeof(char);
   size_t devCellValidities1Size = cellValidities1.size()  * sizeof(char);
   size_t devCellValidities2Size = cellValidities2.size()  * sizeof(char);
   size_t devCellValues1Size = cellValues1.size() * sizeof(char);
   size_t devCellValues2Size = cellValues2.size() * sizeof(char);
+  handleError(
+    cudaMalloc(&devMinutiae1, devMinutiae1Size));
+  handleError(
+    cudaMemcpy(devMinutiae1, minutiae1.data(), devMinutiae1Size, cudaMemcpyHostToDevice));
+  handleError(
+    cudaMalloc(&devMinutiae2, devMinutiae2Size));
+  handleError(
+    cudaMemcpy(devMinutiae2, minutiae2.data(), devMinutiae2Size, cudaMemcpyHostToDevice));
   handleError(
     cudaMalloc(&devCylinderValidities1, devCylinderValidities1Size));
   handleError(
@@ -164,8 +202,8 @@ float matchTemplate(
   dim3 blockCount(ceilMod(rows, threadPerDim), ceilMod(cols, threadPerDim));
   dim3 threadCount(threadPerDim, threadPerDim);
   computeSimilarity<<<blockCount, threadCount>>>(
-    devBinarizedValidities1, devBinarizedValues1,
-    devBinarizedValidities2, devBinarizedValues2,
+    devMinutiae1, devCylinderValidities1, devBinarizedValidities1, devBinarizedValues1,
+    devMinutiae2, devCylinderValidities2, devBinarizedValidities2, devBinarizedValues2,
     devMatrix, rows, cols);
   handleError(
     cudaPeekAtLastError());
@@ -174,6 +212,8 @@ float matchTemplate(
   handleError(
     cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
 
+  cudaFree(devMinutiae1);
+  cudaFree(devMinutiae2);
   cudaFree(devCylinderValidities1);
   cudaFree(devCylinderValidities2);
   cudaFree(devCellValidities1);
