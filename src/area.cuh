@@ -10,4 +10,10 @@ std::vector<char> buildValidArea(
   const std::vector<Minutia>& minutiae,
   const int width, const int height);
 
+__host__
+void devBuildValidArea(
+  const std::vector<Minutia> &minutiae,
+  const int width, const int height,
+  char *devArea);
+
 #endif

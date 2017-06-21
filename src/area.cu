@@ -78,33 +78,11 @@ void fillConvexHull(Minutia *hull, const int nHull,
 }
 
 __host__
-vector<char> buildValidArea(const vector<Minutia>& minutiae,
-    const int width, const int height) {
+void devBuildValidArea(
+    const vector<Minutia> &minutiae,
+    const int width, const int height,
+    char *devArea) {
   auto hull = buildConvexHull(minutiae);
-
-  size_t devHullSize = hull.size() * sizeof(Minutia);
-  size_t devAreaSize = width * height * sizeof(char);
-  Minutia *devHull;
-  char *devArea;
-  handleError(
-    cudaMalloc(&devHull, devHullSize));
-  handleError(
-    cudaMemcpy(devHull, hull.data(), devHullSize, cudaMemcpyHostToDevice));
-  handleError(
-    cudaMalloc(&devArea, devAreaSize));
-
-  int threadPerDim = 32;
-  dim3 blockCount(ceilMod(width, threadPerDim), ceilMod(height, threadPerDim));
-  dim3 threadCount(threadPerDim, threadPerDim);
-
-  fillConvexHull<<<blockCount, threadCount, devHullSize>>>(
-    devHull, hull.size(), width, height, devArea);
-
-  vector<char> ret(width * height);
-  handleError(
-    cudaMemcpy(ret.data(), devArea, devAreaSize, cudaMemcpyDeviceToHost));
-  cudaFree(devHull);
-  cudaFree(devArea);
 
 #ifdef DEBUG
   ofstream hullStream("plot/hull.txt");
@@ -113,7 +91,45 @@ vector<char> buildValidArea(const vector<Minutia>& minutiae,
     hullStream << hull[i].x << ' ' << hull[i].y << endl;
   hullStream << endl;
   hullStream.close();
+#endif
 
+  Minutia *devHull;
+  size_t devHullSize = hull.size() * sizeof(Minutia);
+  handleError(
+    cudaMalloc(&devHull, devHullSize));
+  handleError(
+    cudaMemcpy(devHull, hull.data(), devHullSize, cudaMemcpyHostToDevice));
+
+  int threadPerDim = 32;
+  dim3 blockCount(ceilMod(width, threadPerDim), ceilMod(height, threadPerDim));
+  dim3 threadCount(threadPerDim, threadPerDim);
+  fillConvexHull<<<blockCount, threadCount, devHullSize>>>(
+    devHull, hull.size(), width, height, devArea);
+  handleError(
+    cudaPeekAtLastError());
+
+  cudaFree(devHull);
+}
+
+__host__
+vector<char> buildValidArea(
+    const vector<Minutia>& minutiae,
+    const int width, const int height) {
+
+  char *devArea;
+  size_t devAreaSize = width * height * sizeof(char);
+  handleError(
+    cudaMalloc(&devArea, devAreaSize));
+
+  devBuildValidArea(minutiae, width, height, devArea);
+
+  vector<char> ret(width * height);
+  handleError(
+    cudaMemcpy(ret.data(), devArea, devAreaSize, cudaMemcpyDeviceToHost));
+
+  cudaFree(devArea);
+
+#ifdef DEBUG
   ofstream areaStream("plot/area.txt");
   for (int i = 0; i < height; ++i) {
     for (int j = 0; j < width; ++j) {

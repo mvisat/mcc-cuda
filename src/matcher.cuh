@@ -17,4 +17,16 @@ float matchTemplate(
   const std::vector<char>& cellValues2,
   std::vector<float>& matrix);
 
+__host__
+float devMatchTemplate(
+  Minutia *devMinutiae1, const int n,
+  char *devCylinderValidities1,
+  char *devCellValidities1,
+  char *devCellValues1,
+  Minutia *devMinutiae2, const int m,
+  char *devCylinderValidities2,
+  char *devCellValidities2,
+  char *devCellValues2,
+  std::vector<float>& matrix);
+
 #endif

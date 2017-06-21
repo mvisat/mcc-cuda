@@ -137,14 +137,29 @@ void buildCylinder(
 }
 
 __host__
+void devBuildTemplate(
+    Minutia *devMinutiae, const int n,
+    char *devArea, const int width, const int height,
+    char *devCylinderValidities,
+    char *devCellValidities,
+    char *devCellValues) {
+
+  initialize();
+
+  dim3 blockDim(NS, NS);
+  int sharedSize = n * sizeof(Minutia);
+  buildCylinder<<<n, blockDim, sharedSize>>>(
+    devMinutiae, width, height, devArea, numCellsInCylinder,
+    devCylinderValidities, devCellValidities, devCellValues);
+}
+
+__host__
 void buildTemplate(
     const vector<Minutia>& minutiae,
     const int width, const int height,
     vector<char>& cylinderValidities,
     vector<char>& cellValidities,
     vector<char>& cellValues) {
-
-  initialize();
 
   auto area = buildValidArea(minutiae, width, height);
 
@@ -171,11 +186,12 @@ void buildTemplate(
   handleError(
     cudaMalloc(&devCellValidities, devCellValiditiesSize));
 
-  dim3 blockDim(NS, NS);
-  int sharedSize = devMinutiaeSize;
-  buildCylinder<<<minutiae.size(), blockDim, sharedSize>>>(
-    devMinutiae, width, height, devArea, numCellsInCylinder,
-    devCylinderValidities, devCellValidities, devCellValues);
+  devBuildTemplate(
+    devMinutiae, minutiae.size(),
+    devArea, width, height,
+    devCylinderValidities,
+    devCellValidities,
+    devCellValues);
 
   cylinderValidities.resize(minutiae.size());
   cellValidities.resize(minutiae.size() * NC);

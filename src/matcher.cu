@@ -81,7 +81,7 @@ void computeSimilarity(
 }
 
 __host__
-float LSS(const vector<float>& _matrix, int rows, int cols) {
+float LSS(const vector<float>& _matrix, const int rows, const int cols) {
   auto matrix(_matrix);
   auto sigmoid = [&](int value, float tau, float mu) {
     return 1.0f / (1.0f + expf(-tau * (value-mu)));
@@ -95,6 +95,71 @@ float LSS(const vector<float>& _matrix, int rows, int cols) {
 }
 
 __host__
+float devMatchTemplate(
+    Minutia *devMinutiae1, const int n,
+    char *devCylinderValidities1,
+    char *devCellValidities1,
+    char *devCellValues1,
+    Minutia *devMinutiae2, const int m,
+    char *devCylinderValidities2,
+    char *devCellValidities2,
+    char *devCellValues2,
+    vector<float> &matrix) {
+
+  int intPerCylinder = NC/BITS;
+  unsigned int *devBinarizedValidities1, *devBinarizedValues1;
+  unsigned int *devBinarizedValidities2, *devBinarizedValues2;
+  size_t devBinarizedValidities1Size = n * intPerCylinder * sizeof(unsigned int);
+  size_t devBinarizedValues1Size = n * intPerCylinder * sizeof(unsigned int);
+  size_t devBinarizedValidities2Size = m * intPerCylinder * sizeof(unsigned int);
+  size_t devBinarizedValues2Size = m * intPerCylinder * sizeof(unsigned int);
+  handleError(
+    cudaMalloc(&devBinarizedValidities1, devBinarizedValidities1Size));
+  handleError(
+    cudaMalloc(&devBinarizedValidities2, devBinarizedValidities2Size));
+  handleError(
+    cudaMalloc(&devBinarizedValues1, devBinarizedValues1Size));
+  handleError(
+    cudaMalloc(&devBinarizedValues2, devBinarizedValues2Size));
+
+  binarizedTemplate<<<n, intPerCylinder>>>(
+    devCellValidities1, devCellValues1, devBinarizedValidities1, devBinarizedValues1);
+  handleError(
+    cudaPeekAtLastError());
+  binarizedTemplate<<<m, intPerCylinder>>>(
+    devCellValidities2, devCellValues2, devBinarizedValidities2, devBinarizedValues2);
+  handleError(
+    cudaPeekAtLastError());
+
+  float *devMatrix;
+  size_t devMatrixSize = n * m * sizeof(float);
+  handleError(
+    cudaMalloc(&devMatrix, devMatrixSize));
+
+  int threadPerDim = 32;
+  dim3 blockCount(ceilMod(m, threadPerDim), ceilMod(n, threadPerDim));
+  dim3 threadCount(threadPerDim, threadPerDim);
+  computeSimilarity<<<blockCount, threadCount>>>(
+    devMinutiae1, devCylinderValidities1, devBinarizedValidities1, devBinarizedValues1,
+    devMinutiae2, devCylinderValidities2, devBinarizedValidities2, devBinarizedValues2,
+    devMatrix, n, m);
+  handleError(
+    cudaPeekAtLastError());
+
+  matrix.resize(n * m);
+  handleError(
+    cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
+
+  cudaFree(devBinarizedValidities1);
+  cudaFree(devBinarizedValidities2);
+  cudaFree(devBinarizedValues1);
+  cudaFree(devBinarizedValues2);
+  cudaFree(devMatrix);
+
+  return LSS(matrix, n, m);
+}
+
+__host__
 float matchTemplate(
     const vector<Minutia>& minutiae1,
     const vector<char>& cylinderValidities1,
@@ -105,9 +170,6 @@ float matchTemplate(
     const vector<char>& cellValidities2,
     const vector<char>& cellValues2,
     vector<float>& matrix) {
-
-  int rows = cylinderValidities1.size();
-  int cols = cylinderValidities2.size();
 
   Minutia *devMinutiae1, *devMinutiae2;
   char *devCylinderValidities1, *devCylinderValidities2;
@@ -154,48 +216,12 @@ float matchTemplate(
   handleError(
     cudaMemcpy(devCellValues2, cellValues2.data(), devCellValues2Size, cudaMemcpyHostToDevice));
 
-  unsigned int *devBinarizedValidities1, *devBinarizedValues1;
-  unsigned int *devBinarizedValidities2, *devBinarizedValues2;
-  size_t devBinarizedValidities1Size = (cellValidities1.size()/BITS) * sizeof(unsigned int);
-  size_t devBinarizedValidities2Size = (cellValidities2.size()/BITS) * sizeof(unsigned int);
-  size_t devBinarizedValues1Size = (cellValues1.size()/BITS) * sizeof(unsigned int);
-  size_t devBinarizedValues2Size = (cellValues2.size()/BITS) * sizeof(unsigned int);
-  handleError(
-    cudaMalloc(&devBinarizedValidities1, devBinarizedValidities1Size));
-  handleError(
-    cudaMalloc(&devBinarizedValidities2, devBinarizedValidities2Size));
-  handleError(
-    cudaMalloc(&devBinarizedValues1, devBinarizedValues1Size));
-  handleError(
-    cudaMalloc(&devBinarizedValues2, devBinarizedValues2Size));
-
-  binarizedTemplate<<<cylinderValidities1.size(), NC/BITS>>>(
-    devCellValidities1, devCellValues1, devBinarizedValidities1, devBinarizedValues1);
-  handleError(
-    cudaPeekAtLastError());
-  binarizedTemplate<<<cylinderValidities2.size(), NC/BITS>>>(
-    devCellValidities2, devCellValues2, devBinarizedValidities2, devBinarizedValues2);
-  handleError(
-    cudaPeekAtLastError());
-
-  float *devMatrix;
-  size_t devMatrixSize = rows * cols * sizeof(float);
-  handleError(
-    cudaMalloc(&devMatrix, devMatrixSize));
-
-  int threadPerDim = 32;
-  dim3 blockCount(ceilMod(cols, threadPerDim), ceilMod(rows, threadPerDim));
-  dim3 threadCount(threadPerDim, threadPerDim);
-  computeSimilarity<<<blockCount, threadCount>>>(
-    devMinutiae1, devCylinderValidities1, devBinarizedValidities1, devBinarizedValues1,
-    devMinutiae2, devCylinderValidities2, devBinarizedValidities2, devBinarizedValues2,
-    devMatrix, rows, cols);
-  handleError(
-    cudaPeekAtLastError());
-
-  matrix.resize(rows*cols);
-  handleError(
-    cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
+  auto ret = devMatchTemplate(
+    devMinutiae1, minutiae1.size(),
+    devCylinderValidities1, devCellValidities1, devCellValues1,
+    devMinutiae2, minutiae2.size(),
+    devCylinderValidities2, devCellValidities2, devCellValues2,
+    matrix);
 
   cudaFree(devMinutiae1);
   cudaFree(devMinutiae2);
@@ -205,11 +231,6 @@ float matchTemplate(
   cudaFree(devCellValidities2);
   cudaFree(devCellValues1);
   cudaFree(devCellValues2);
-  cudaFree(devBinarizedValidities1);
-  cudaFree(devBinarizedValidities2);
-  cudaFree(devBinarizedValues1);
-  cudaFree(devBinarizedValues2);
-  cudaFree(devMatrix);
 
-  return LSS(matrix, rows, cols);
+  return ret;
 }

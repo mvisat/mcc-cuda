@@ -13,4 +13,12 @@ void buildTemplate(
   std::vector<char>&,
   std::vector<char>&);
 
+__host__
+void devBuildTemplate(
+  Minutia *devMinutiae, const int n,
+  char *devArea, const int width, const int height,
+  char *devCylinderValidities,
+  char *devCellValidities,
+  char *devCellValues);
+
 #endif
