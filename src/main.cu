@@ -7,6 +7,7 @@
 #include "template.cuh"
 #include "matcher.cuh"
 #include "io.cuh"
+#include "mcc.cuh"
 
 using namespace std;
 
@@ -28,7 +29,7 @@ bool buildTemplateFromFile(
     cylinderValidities.size(), cylinderValidities, cellValidities, cellValues);
 }
 
-bool buildSimilarityFromFile(
+bool buildSimilarityFromTemplate(
     const char *template1,
     const char *template2,
     const char *output) {
@@ -59,19 +60,39 @@ bool buildSimilarityFromFile(
   return saveSimilarityToFile(output, m1, m2, matrix);
 }
 
+bool buildSimilarityFromMinutiae(
+    const char *minutiae1,
+    const char *minutiae2,
+    const char *output) {
+  MCC mcc(minutiae1);
+  if (!mcc.load() || !mcc.build()) return false;
+
+  float similarity;
+  int n, m;
+  vector<float> matrix;
+  bool ret = mcc.match(minutiae2, similarity, n, m, matrix);
+  mcc.dispose();
+  if (!ret) return false;
+  printf("Similarity: %f\n", similarity);
+  return saveSimilarityToFile(output, n, m, matrix);
+}
+
 void printUsage(char const *argv[]) {
-  cerr << "usage: " << argv[0] << " [template|match] [options]\n";
+  cerr << "usage: " << argv[0] << " [mcc|template|match] [options]\n";
   cerr << endl;
-  cerr << "template\t: <input> <output>\n";
-  cerr << "match\t\t: <template1> <template2> <output>\n";
+  cerr << "mcc\t\t: <in:minutia1> <in:minutia2> <out:similarity>\n";
+  cerr << "template\t: <in:minutia> <out:template>\n";
+  cerr << "match\t\t: <in:template1> <in:template2> <out:similarity>\n";
 }
 
 int main(int argc, char const *argv[]) {
   if (argc > 1) {
-    if (strncmp(argv[1], "template", 8) == 0 && argc == 4) {
+    if (strncmp(argv[1], "mcc", 3) == 0 && argc == 5) {
+      return !buildSimilarityFromMinutiae(argv[2], argv[3], argv[4]);
+    } else if (strncmp(argv[1], "template", 8) == 0 && argc == 4) {
       return !buildTemplateFromFile(argv[2], argv[3]);
     } else if (strncmp(argv[1], "match", 5) == 0 && argc == 5) {
-      return !buildSimilarityFromFile(argv[2], argv[3], argv[4]);
+      return !buildSimilarityFromTemplate(argv[2], argv[3], argv[4]);
     }
   }
 

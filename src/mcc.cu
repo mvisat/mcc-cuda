@@ -70,10 +70,10 @@ void MCC::dispose() {
   built = false;
 }
 
-bool MCC::match(const char *target, float &similarity, vector<float> &matrix) {
+bool MCC::match(const char *target,
+    float &similarity, int &n, int &m, vector<float> &matrix) {
   MCC mcc(target);
-  if (!mcc.load()) return false;
-  if (!mcc.build()) return false;
+  if (!mcc.load() || !mcc.build()) return false;
 
   similarity = devMatchTemplate(
     devMinutiae, minutiae.size(),
@@ -81,6 +81,8 @@ bool MCC::match(const char *target, float &similarity, vector<float> &matrix) {
     mcc.devMinutiae, mcc.minutiae.size(),
     mcc.devCylinderValidities, mcc.devCellValidities, mcc.devCellValues,
     matrix);
+  n = minutiae.size();
+  m = mcc.minutiae.size();
 
   mcc.dispose();
   return true;

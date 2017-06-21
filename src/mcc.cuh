@@ -14,7 +14,8 @@ public:
   bool build();
   void dispose();
 
-  bool match(const char *target, float &similarity, std::vector<float> &matrix);
+  bool match(const char *target,
+    float &similarity, int &n, int &m, std::vector<float> &matrix);
 
 private:
   MCC();
