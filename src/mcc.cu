@@ -1,3 +1,6 @@
+#include <chrono>
+#include <iostream>
+
 #include "mcc.cuh"
 #include "constants.cuh"
 #include "minutia.cuh"
@@ -47,6 +50,7 @@ bool MCC::build() {
   handleError(
     cudaMalloc(&devCellValues, devCellValuesSize));
 
+  auto begin = std::chrono::high_resolution_clock::now();
   devBuildValidArea(minutiae, width, height, devArea);
   devBuildTemplate(
     devMinutiae, minutiae.size(),
@@ -54,6 +58,9 @@ bool MCC::build() {
     devCylinderValidities,
     devCellValidities,
     devCellValues);
+  auto end = chrono::high_resolution_clock::now();
+  auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
+  cout << "Time taken to build template: " << duration << " microseconds\n";
 
   return built = true;
 }
@@ -75,12 +82,17 @@ bool MCC::match(const char *target,
   MCC mcc(target);
   if (!mcc.load() || !mcc.build()) return false;
 
+  auto begin = std::chrono::high_resolution_clock::now();
   similarity = devMatchTemplate(
     devMinutiae, minutiae.size(),
     devCylinderValidities, devCellValidities, devCellValues,
     mcc.devMinutiae, mcc.minutiae.size(),
     mcc.devCylinderValidities, mcc.devCellValidities, mcc.devCellValues,
     matrix);
+  auto end = chrono::high_resolution_clock::now();
+  auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
+  cout << "Time taken to match templates: " << duration << " microseconds\n";
+
   n = minutiae.size();
   m = mcc.minutiae.size();
 
