@@ -78,4 +78,9 @@ float angle(float theta1, float theta2) {
   return diff;
 }
 
+__host__ __device__ __inline__
+float sigmoid(int value, float tau, float mu) {
+  return 1.0f / (1.0f + expf(-tau * (value-mu)));
+}
+
 #endif
