@@ -17,7 +17,7 @@ bool buildTemplateFromFile(
     const char *output) {
   int width, height, dpi, n;
   vector<Minutia> minutiae;
-  if (!loadMinutiaeFromFile(input, &width, &height, &dpi, &n, minutiae))
+  if (!loadMinutiaeFromFile(input, width, height, dpi, n, minutiae))
     return false;
 
   vector<char> cylinderValidities, cellValidities, cellValues;
@@ -39,8 +39,8 @@ bool buildSimilarityFromTemplate(
   int m1;
   vector<char> cylinderValidities1, cellValidities1, cellValues1;
   if (!loadTemplateFromFile(template1,
-      &width1, &height1, &dpi1, &n1, minutiae1,
-      &m1, cylinderValidities1, cellValidities1, cellValues1))
+      width1, height1, dpi1, n1, minutiae1,
+      m1, cylinderValidities1, cellValidities1, cellValues1))
     return false;
 
   int width2, height2, dpi2, n2;
@@ -48,8 +48,8 @@ bool buildSimilarityFromTemplate(
   int m2;
   vector<char> cylinderValidities2, cellValidities2, cellValues2;
   if (!loadTemplateFromFile(template2,
-      &width2, &height2, &dpi2, &n2, minutiae2,
-      &m2, cylinderValidities2, cellValidities2, cellValues2))
+      width2, height2, dpi2, n2, minutiae2,
+      m2, cylinderValidities2, cellValidities2, cellValues2))
     return false;
 
   vector<float> matrix;

@@ -7,14 +7,14 @@
 
 bool loadMinutiaeFromFile(
     const char *input,
-    int *width, int *height, int *dpi, int *n,
+    int &width, int &height, int &dpi, int &n,
     std::vector<Minutia> &minutiae);
 
 bool loadTemplateFromFile(
     const char *input,
-    int *width, int *height, int *dpi, int *n,
+    int &width, int &height, int &dpi, int &n,
     std::vector<Minutia> &minutiae,
-    int *m,
+    int &m,
     std::vector<char> &cylinderValidities,
     std::vector<char> &cellValidities,
     std::vector<char> &cellValues);

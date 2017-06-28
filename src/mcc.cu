@@ -23,7 +23,7 @@ MCC::~MCC() {
 
 bool MCC::load() {
   if (loaded) return true;
-  return loaded = loadMinutiaeFromFile(input, &width, &height, &dpi, &n, minutiae);
+  return loaded = loadMinutiaeFromFile(input, width, height, dpi, n, minutiae);
 }
 
 bool MCC::build() {

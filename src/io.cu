@@ -10,14 +10,14 @@ using namespace std;
 
 bool loadMinutiaeFromFile(
     const char *input,
-    int *width, int *height, int *dpi, int *n,
+    int &width, int &height, int &dpi, int &n,
     vector<Minutia> &minutiae) {
   ifstream istream;
   istream.exceptions(ifstream::failbit | ifstream::badbit);
   try {
     istream.open(input);
-    istream >> *width >> *height >> *dpi >> *n;
-    for (int i = 0; i < *n; ++i) {
+    istream >> width >> height >> dpi >> n;
+    for (int i = 0; i < n; ++i) {
       int x, y;
       float theta;
       istream >> x >> y >> theta;
@@ -34,9 +34,9 @@ bool loadMinutiaeFromFile(
 
 bool loadTemplateFromFile(
     const char *input,
-    int *width, int *height, int *dpi, int *n,
+    int &width, int &height, int &dpi, int &n,
     vector<Minutia> &minutiae,
-    int *m,
+    int &m,
     vector<char> &cylinderValidities,
     vector<char> &cellValidities,
     vector<char> &cellValues) {
@@ -44,18 +44,18 @@ bool loadTemplateFromFile(
   istream.exceptions(ifstream::failbit | ifstream::badbit);
   try {
     istream.open(input);
-    istream >> *width >> *height >> *dpi >> *n;
-    for (int i = 0; i < *n; ++i) {
+    istream >> width >> height >> dpi >> n;
+    for (int i = 0; i < n; ++i) {
       int x, y;
       float theta;
       istream >> x >> y >> theta;
       minutiae.emplace_back(x, y, theta);
     }
-    istream >> *m;
-    cylinderValidities.resize(*m);
-    cellValidities.reserve(*m * NC);
-    cellValues.reserve(*m * NC);
-    for (int l = 0; l < *m; ++l) {
+    istream >> m;
+    cylinderValidities.resize(m);
+    cellValidities.reserve(m * NC);
+    cellValues.reserve(m * NC);
+    for (int l = 0; l < m; ++l) {
       string s;
       istream >> s;
       cylinderValidities[l] = s.compare("True") == 0 ? 1 : 0;
