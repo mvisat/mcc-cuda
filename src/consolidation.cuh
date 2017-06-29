@@ -6,4 +6,7 @@
 __host__
 float LSS(const std::vector<float>& _matrix, const int rows, const int cols);
 
+__host__
+float devLSS(float *devMatrix, const int rows, const int cols);
+
 #endif

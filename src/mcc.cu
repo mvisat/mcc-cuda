@@ -113,16 +113,16 @@ bool MCC::match(const char *target,
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
   cout << "Time taken to match templates: " << duration << " microseconds\n";
 
+  begin = std::chrono::high_resolution_clock::now();
+  similarity = devLSS(devMatrix, n, m);
+  end = chrono::high_resolution_clock::now();
+  duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
+  cout << "Time taken to compute global score: " << duration << " microseconds\n";
+
   matrix.resize(n * m);
   handleError(
     cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
   cudaFree(devMatrix);
-
-  begin = std::chrono::high_resolution_clock::now();
-  similarity = LSS(matrix, n, m);
-  end = chrono::high_resolution_clock::now();
-  duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
-  cout << "Time taken to compute global score: " << duration << " microseconds\n";
 
   mcc.dispose();
   return true;
