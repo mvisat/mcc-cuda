@@ -33,6 +33,7 @@ private:
   char *devCellValues;
   unsigned int *devBinarizedValidities;
   unsigned int *devBinarizedValues;
+  float *devMatrix;
 };
 
 #endif

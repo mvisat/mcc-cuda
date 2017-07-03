@@ -57,6 +57,10 @@ bool MCC::build() {
   handleError(
     cudaMalloc(&devBinarizedValues, devBinarizedSize));
 
+  size_t devMatrixSize = MAX_MINUTIAE * MAX_MINUTIAE * sizeof(float);
+  handleError(
+    cudaMalloc(&devMatrix, devMatrixSize));
+
   auto begin = std::chrono::high_resolution_clock::now();
   devBuildValidArea(minutiae, width, height, devArea);
   devBuildTemplate(
@@ -85,6 +89,7 @@ void MCC::dispose() {
   cudaFree(devCellValues);
   cudaFree(devBinarizedValidities);
   cudaFree(devBinarizedValues);
+  cudaFree(devMatrix);
 
   built = false;
 }
@@ -97,11 +102,6 @@ bool MCC::match(const char *target,
   n = minutiae.size();
   m = mcc.minutiae.size();
 
-  float *devMatrix;
-  size_t devMatrixSize = n * m * sizeof(float);
-  handleError(
-    cudaMalloc(&devMatrix, devMatrixSize));
-
   auto begin = std::chrono::high_resolution_clock::now();
   devMatchTemplate(
     devMinutiae, n,
@@ -113,16 +113,16 @@ bool MCC::match(const char *target,
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
   cout << "Time taken to match templates: " << duration << " microseconds\n";
 
-  begin = std::chrono::high_resolution_clock::now();
-  similarity = devLSS(devMatrix, n, m);
-  end = chrono::high_resolution_clock::now();
-  duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
-  cout << "Time taken to compute global score: " << duration << " microseconds\n";
-
+  size_t devMatrixSize = n * m * sizeof(float);
   matrix.resize(n * m);
   handleError(
     cudaMemcpy(matrix.data(), devMatrix, devMatrixSize, cudaMemcpyDeviceToHost));
-  cudaFree(devMatrix);
+
+  begin = std::chrono::high_resolution_clock::now();
+  similarity = LSSR(matrix, n, m, minutiae, mcc.minutiae);
+  end = chrono::high_resolution_clock::now();
+  duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
+  cout << "Time taken to compute global score: " << duration << " microseconds\n";
 
   mcc.dispose();
   return true;
