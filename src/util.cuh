@@ -79,6 +79,11 @@ float angle(float theta1, float theta2) {
 }
 
 __host__ __device__ __inline__
+float radian(const Minutia &m1, const Minutia &m2) {
+  return angle(m1.theta, atan2f(m1.y-m2.y, m2.x-m1.x));
+}
+
+__host__ __device__ __inline__
 float sigmoid(int value, float tau, float mu) {
   return 1.0f / (1.0f + expf(-tau * (value-mu)));
 }

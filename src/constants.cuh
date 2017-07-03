@@ -28,6 +28,14 @@
 #define TAU_P (2.0f / 5)
 #define MIN_NP 4
 #define MAX_NP 12
+#define WR 0.5f
+#define MU_P1 5.0f
+#define TAU_P1 (-8.0f / 5)
+#define MU_P2 (M_PI / 12)
+#define TAU_P2 -30.0f
+#define MU_P3 (M_PI / 12)
+#define TAU_P3 -30.0f
+#define N_REL 5
 
 #define DELTA_S (2.0f * R / NS)
 #define DELTA_D (2 * M_PI / ND)
