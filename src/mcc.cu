@@ -72,6 +72,8 @@ bool MCC::build() {
   devBinarizedTemplate(minutiae.size(),
     devCellValidities, devCellValues,
     devBinarizedValidities, devBinarizedValues);
+  handleError(
+    cudaDeviceSynchronize());
   auto end = chrono::high_resolution_clock::now();
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
   cout << "Time taken to build template: " << duration << " microseconds\n";
@@ -109,6 +111,8 @@ bool MCC::match(const char *target,
     mcc.devMinutiae, m,
     mcc.devCylinderValidities, mcc.devBinarizedValidities, mcc.devBinarizedValues,
     devMatrix);
+  handleError(
+    cudaDeviceSynchronize());
   auto end = chrono::high_resolution_clock::now();
   auto duration = chrono::duration_cast<chrono::microseconds>(end-begin).count();
   cout << "Time taken to match templates: " << duration << " microseconds\n";
