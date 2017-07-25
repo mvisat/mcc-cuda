@@ -17,6 +17,7 @@ bool loadMinutiaeFromFile(
   try {
     istream.open(input);
     istream >> width >> height >> dpi >> n;
+    minutiae.clear();
     for (int i = 0; i < n; ++i) {
       int x, y;
       float theta;
@@ -45,6 +46,7 @@ bool loadTemplateFromFile(
   try {
     istream.open(input);
     istream >> width >> height >> dpi >> n;
+    minutiae.clear();
     for (int i = 0; i < n; ++i) {
       int x, y;
       float theta;
