@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <tuple>
 #include <fstream>
+#include <iostream>
 
 #include "minutia.cuh"
 #include "constants.cuh"
@@ -19,7 +20,7 @@ vector<Minutia> buildConvexHull(const vector<Minutia>& _minutiae) {
       min_y = i;
   }
 
-  Minutia pivot = minutiae[min_y];
+  Minutia pivot(minutiae[min_y]);
   swap(minutiae.front(), minutiae[min_y]);
   sort(minutiae.begin()+1, minutiae.end(), [&]
       (const Minutia &lhs, const Minutia &rhs) {
@@ -37,8 +38,8 @@ vector<Minutia> buildConvexHull(const vector<Minutia>& _minutiae) {
     hull.push_back(minutiae[i]);
 
   for (int i = 3; i < minutiae.size(); ++i) {
-    Minutia top = hull.back();
-    while (minutiaTurn(hull.back(), top, minutiae[i]) != 1) {
+    Minutia top(hull.back());
+    while (!hull.empty() && minutiaTurn(hull.back(), top, minutiae[i]) != 1) {
       top = hull.back();
       hull.pop_back();
     }
