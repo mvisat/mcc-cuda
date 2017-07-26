@@ -7,20 +7,22 @@
 
 class MCC {
 public:
-  MCC(const char *input);
+  MCC();
+  MCC(const char *input, bool autoLoad = true);
   virtual ~MCC();
 
   bool load();
+  bool load(const char *input);
   bool build();
-  void dispose();
 
   bool match(const char *target,
     float &similarity, int &n, int &m, std::vector<float> &matrix);
+  void matchMany(const std::vector<std::string> &targets, std::vector<float> &values);
 
 private:
-  MCC();
-
-  bool loaded, built;
+  void initialize();
+  void allocate();
+  void dispose();
 
   const char *input;
   int width, height, dpi, n;

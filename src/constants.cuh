@@ -9,7 +9,9 @@
 #endif
 #define M_2PI (M_PI * 2)
 
-#define MAX_MINUTIAE 256
+#define MAX_MINUTIAE 512
+#define MAX_WIDTH 1024
+#define MAX_HEIGHT 1024
 #define BITS (8 * sizeof(unsigned int))
 
 #define R 70

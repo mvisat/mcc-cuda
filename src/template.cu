@@ -14,6 +14,7 @@ int numCellsInCylinder = 0;
 
 __host__ void initialize() {
   if (initialized) return;
+  initialized = true;
 
   numCellsInCylinder = 0;
   float temp = DELTA_S/2;
@@ -26,7 +27,6 @@ __host__ void initialize() {
       if (dx*dx + dy*dy <= R_SQR) ++numCellsInCylinder;
     }
   }
-  initialized = true;
 }
 
 __host__ __device__ __inline__

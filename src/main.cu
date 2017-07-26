@@ -1,6 +1,8 @@
 #include <vector>
 #include <iostream>
 
+#include <dirent.h>
+
 #include "errors.h"
 #include "debug.h"
 #include "constants.cuh"
@@ -56,7 +58,7 @@ bool buildSimilarityFromTemplate(
   matchTemplate(
     minutiae1, cylinderValidities1, cellValidities1, cellValues1,
     minutiae2, cylinderValidities2, cellValidities2, cellValues2,
-    matrix);  
+    matrix);
   auto similarity = LSSR(matrix, m1, m2, minutiae1, minutiae2);
   printf("Similarity: %f\n", similarity);
   return saveSimilarityToFile(output, m1, m2, matrix);
@@ -73,10 +75,33 @@ bool buildSimilarityFromMinutiae(
   int n, m;
   vector<float> matrix;
   bool ret = mcc.match(minutiae2, similarity, n, m, matrix);
-  mcc.dispose();
   if (!ret) return false;
   printf("Similarity: %f\n", similarity);
   return saveSimilarityToFile(output, n, m, matrix);
+}
+
+bool matchMany(const char *input, const char *targetDir) {
+  DIR *dir;
+  struct dirent *ent;
+  vector<string> targets;
+  vector<float> values;
+  string stargetDir(targetDir);
+  if (stargetDir.back() != '/')
+    stargetDir += '/';
+
+  if ((dir = opendir(targetDir)) != NULL) {
+    while ((ent = readdir(dir)) != NULL) {
+      if (ent->d_type != DT_REG)
+        continue;
+      targets.push_back(stargetDir + string(ent->d_name));
+    }
+    closedir(dir);
+    values.resize(targets.size());
+    MCC mcc(input, false);
+    mcc.matchMany(targets, values);
+    return true;
+  }
+  return false;
 }
 
 void printUsage(char const *argv[]) {
@@ -85,6 +110,7 @@ void printUsage(char const *argv[]) {
   cerr << "mcc\t\t: <in:minutia1> <in:minutia2> <out:similarity>\n";
   cerr << "template\t: <in:minutia> <out:template>\n";
   cerr << "match\t\t: <in:template1> <in:template2> <out:similarity>\n";
+  cerr << "many\t\t: <in:minutia> <in:dir>\n";
 }
 
 int main(int argc, char const *argv[]) {
@@ -95,6 +121,8 @@ int main(int argc, char const *argv[]) {
       return !buildTemplateFromFile(argv[2], argv[3]);
     } else if (strncmp(argv[1], "match", 5) == 0 && argc == 5) {
       return !buildSimilarityFromTemplate(argv[2], argv[3], argv[4]);
+    } else if (strncmp(argv[1], "many", 4) == 0 && argc == 4) {
+      return !matchMany(argv[2], argv[3]);
     }
   }
 
