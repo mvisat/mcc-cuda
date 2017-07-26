@@ -4,7 +4,7 @@ OBJ_DIR   := obj
 BUILD_DIR := build
 
 CUDA_PATH := /usr/local/cuda
-LDFLAGS	  += -lcuda -lcudart -lm -lrt
+LDFLAGS	  += -lcuda -lcudart -lm -lrt -lpthread
 INCLUDES  += -I. -I$(CUDA_PATH)/include
 LIBS      += -L$(CUDA_PATH)/lib64
 CXXFLAGS  += -Wall -pedantic -O3 -std=c++11
