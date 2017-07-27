@@ -84,8 +84,8 @@ float radian(const Minutia &m1, const Minutia &m2) {
 }
 
 __host__ __device__ __inline__
-float sigmoid(int value, float tau, float mu) {
-  return 1.0f / (1.0f + expf(-tau * (value-mu)));
+float sigmoid(float value, float tau, float mu) {
+  return 1.0f / (1.0f + expf((tau * (mu-value))));
 }
 
 #endif
