@@ -1,6 +1,20 @@
+# CUDA related
 *.i
 *.ii
 *.gpu
 *.ptx
 *.cubin
 *.fatbin
+
+# C++ related
+*.o
+*.obj
+*.out
+
+build/
+obj/
+output/
+
+plot/*.jpg
+plot/*.png
+plot/*.txt
